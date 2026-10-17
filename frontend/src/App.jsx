@@ -91,6 +91,8 @@ function App() {
 
       setPlaylistQueue([]);
       setActiveTracks([]);
+      setPlaylistName('');
+      setPlaylistDescription('');
     } catch (err) {
       console.error('Failed to export playlist', err);
     }
