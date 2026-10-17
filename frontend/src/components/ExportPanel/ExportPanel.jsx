@@ -5,6 +5,8 @@ import styles from './ExportPanel.module.css';
 function ExportPanel({
   playlistName,
   onNameChange,
+  description,
+  onDescriptionChange,
   playlistQueue,
   onRemoveTrack,
   onSave,
@@ -34,6 +36,19 @@ function ExportPanel({
         value={playlistName}
         onChange={(event) => onNameChange(event.target.value)}
         placeholder="Enter a playlist name"
+      />
+
+      <label className={styles.label} htmlFor="playlist-description">
+        Playlist description
+      </label>
+
+      <textarea
+        id="playlist-description"
+        className={styles.nameInput}
+        value={description}
+        onChange={(event) => onDescriptionChange(event.target.value)}
+        placeholder="What is this playlist about?"
+        rows={3}
       />
 
       <div className={styles.queueHeading}>

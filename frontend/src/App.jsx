@@ -13,6 +13,7 @@ function App() {
   const [activeTracks, setActiveTracks] = useState([]);
   const [playlistQueue, setPlaylistQueue] = useState([]);
   const [playlistName, setPlaylistName] = useState('My Swiped Playlist');
+  const [playlistDescription, setPlaylistDescription] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(null);
 
@@ -79,6 +80,7 @@ function App() {
     try {
       const response = await api.post('/create-playlist', {
         name: playlistName,
+        description: playlistDescription,
         uris: playlistQueue.map((track) => track.uri),
       });
 
@@ -141,6 +143,8 @@ function App() {
         <ExportPanel
           playlistName={playlistName}
           onNameChange={setPlaylistName}
+          description={playlistDescription}
+          onDescriptionChange={setPlaylistDescription}
           playlistQueue={playlistQueue}
           onRemoveTrack={handleRemoveTrack}
           onSave={handleSavePlaylist}

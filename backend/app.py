@@ -140,6 +140,7 @@ def create_playlist():
         return jsonify({"error": "User not authenticated"}), 401
     data = request.json or {}
     playlist_name = data.get('name', 'My Filtered Mix')
+    playlist_description = data.get('description', '')
     track_uris = data.get('uris', [])
     if not track_uris:
         return jsonify({"error": "No tracks selected"}), 400
@@ -148,6 +149,7 @@ def create_playlist():
             "me/playlists",
             payload={
                 "name": playlist_name,
+                "description": playlist_description,
                 "public": True,
             },
         )
