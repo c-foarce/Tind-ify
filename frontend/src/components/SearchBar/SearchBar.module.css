@@ -1,0 +1,51 @@
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inputWrapper {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+}
+
+.searchInput {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.5rem 2.25rem 0.5rem 0.5rem;
+}
+
+.clearButton {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem;
+}
+
+.clearButton:hover {
+  color: #111;
+}
+
+.searchButton {
+  padding: 0.5rem 1rem;
+}
+
+@media (max-width: 450px) {
+  .searchBar {
+    width: 100%;
+  }
+
+  .inputWrapper {
+    flex: 1;
+    min-width: 0;
+  }
+}
