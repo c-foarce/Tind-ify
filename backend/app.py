@@ -144,12 +144,32 @@ def create_playlist():
     if not track_uris:
         return jsonify({"error": "No tracks selected"}), 400
     try:
-        current_user = sp.current_user()
-        user_id = current_user['id']
-        new_playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=True)
-        sp.playlist_add_items(playlist_id=new_playlist['id'], items=track_uris)
+        new_playlist = sp._post(
+            "me/playlists",
+            payload={
+                "name": playlist_name,
+                "public": True,
+            },
+        )
+        sp._post(
+            f"playlists/{new_playlist['id']}/items",
+            payload={"uris": track_uris},
+        )
+
         return jsonify({"status": "success", "message": f"Created '{playlist_name}'!"})
+    
     except Exception as e:
+        print("Spotify playlist export error:", repr(e))
+
+        if hasattr(e, "http_status"):
+            print("Spotify HTTP status:", e.http_status)
+
+        if hasattr(e, "msg"):
+            print("Spotify error message:", e.msg)
+
+        if hasattr(e, "http_headers"):
+            print("Spotify response headers:", e.http_headers)
+
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
