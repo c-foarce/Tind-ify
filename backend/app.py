@@ -156,7 +156,13 @@ def create_playlist():
             payload={"uris": track_uris},
         )
 
-        return jsonify({"status": "success", "message": f"Created '{playlist_name}'!"})
+        return jsonify(
+            {
+                "status": "success",
+                "message": f"Created '{playlist_name}'!",
+                "playlist_url": new_playlist["external_urls"]["spotify"],
+            }
+        )
     
     except Exception as e:
         print("Spotify playlist export error:", repr(e))

@@ -14,6 +14,7 @@ function App() {
   const [playlistQueue, setPlaylistQueue] = useState([]);
   const [playlistName, setPlaylistName] = useState('My Swiped Playlist');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(null);
 
   useEffect(() => {
     api.get('/search?q=')
@@ -73,13 +74,19 @@ function App() {
       return;
     }
 
+    setExportSuccess(null);
+
     try {
       const response = await api.post('/create-playlist', {
         name: playlistName,
         uris: playlistQueue.map((track) => track.uri),
       });
 
-      alert(response.data.message);
+      setExportSuccess({
+        message: response.data.message,
+        url: response.data.playlist_url,
+      });
+
       setPlaylistQueue([]);
       setActiveTracks([]);
     } catch (err) {
@@ -137,6 +144,7 @@ function App() {
           playlistQueue={playlistQueue}
           onRemoveTrack={handleRemoveTrack}
           onSave={handleSavePlaylist}
+          exportSuccess={exportSuccess}
         />
       </section>
     </main>

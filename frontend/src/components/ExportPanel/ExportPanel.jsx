@@ -1,4 +1,4 @@
-
+import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import styles from './ExportPanel.module.css';
 
@@ -8,7 +8,17 @@ function ExportPanel({
   playlistQueue,
   onRemoveTrack,
   onSave,
+  exportSuccess,
 }) {
+
+  const [showSuccess, setShowSuccess] = useState(true);
+
+  useEffect(() => {
+    if (exportSuccess) {
+      setShowSuccess(true);
+    }
+  }, [exportSuccess]);
+
   return (
     <aside className={styles.panel}>
       <h2 className={styles.heading}>Your Playlist</h2>
@@ -100,6 +110,33 @@ function ExportPanel({
       >
         Export to Spotify
       </button>
+
+
+      {exportSuccess && showSuccess && (
+        <div className={styles.successMessage} role="status">
+          <button
+            type="button"
+            className={styles.dismissButton}
+            onClick={() => setShowSuccess(false)}
+            aria-label="Dismiss success message"
+            title="Dismiss message"
+          >
+            x
+          </button>
+
+          <p>{exportSuccess.message}</p>
+
+          <a
+            href={exportSuccess.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open playlist on Spotify
+          </a>
+        </div>
+      )}
+
+
     </aside>
   );
 }
