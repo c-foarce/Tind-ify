@@ -1,0 +1,108 @@
+
+.card {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text);
+}
+
+.cardContent {
+  width: 100%;
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.artwork {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  margin: 0 auto var(--space-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-overlay);
+}
+
+.trackTitle {
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  overflow-wrap: anywhere;
+}
+
+.artist {
+  margin-bottom: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.button {
+  min-width: 120px;
+  padding: var(--space-3) var(--space-6);
+  border: none;
+  border-radius: var(--radius-pill);
+  color: #ffffff;
+  font-weight: 600;
+  transition:
+    transform var(--transition-fast),
+    filter var(--transition-fast);
+}
+
+.button:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.discardButton {
+  background: var(--color-danger);
+}
+
+.keepButton {
+  background: var(--color-primary);
+  color: #121212;
+}
+
+.emptyMessage {
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: var(--space-3);
+  }
+
+  .cardContent {
+    padding: var(--space-2);
+  }
+
+  .artwork {
+    max-width: 220px;
+  }
+
+  .actions {
+    gap: var(--space-2);
+  }
+
+  .button {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-3);
+  }
+}
