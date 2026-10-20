@@ -21,7 +21,7 @@ function SearchBar({ onSearch }) {
         <input
           type="text"
           className={styles.searchInput}
-          placeholder="Search for an album (e.g., Daft Punk)..."
+          placeholder="Search for an album..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

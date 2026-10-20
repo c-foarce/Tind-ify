@@ -1,4 +1,4 @@
 Flask==3.0.2
 flask-cors==4.0.0
-spotipy==2.23.0
+spotipy==2.26.0
 python-dotenv==1.2.4

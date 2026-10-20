@@ -30,7 +30,12 @@ CORS(app)
 
 # Spotify OAuth configuration
 REDIRECT_URI = "http://127.0.0.1:5000/callback"
-SCOPE = "playlist-modify-public playlist-modify-private"
+SCOPE = (
+    "playlist-modify-public "
+    "playlist-modify-private "
+    "playlist-read-private "
+    "playlist-read-collaborative"
+)
 
 def create_spotify_oauth():
     cache_path = os.path.join(
@@ -132,7 +137,138 @@ def get_album_tracks():
         })
     return jsonify(flattened_tracks)
 
-# 5. Save and create a new playlist
+# 5. Retrieve the current user's playlists
+@app.route('/api/playlists', methods=['GET'])
+def get_playlists():
+    sp = get_spotify_client()
+
+    if not sp:
+        return jsonify({"error": "User not authenticated"}), 401
+
+    try:
+        current_user = sp.current_user()
+        current_user_id = current_user['id']
+
+        playlists = []
+        offset = 0
+        limit = 50
+
+        while True:
+            results = sp.current_user_playlists(
+                limit=limit,
+                offset=offset
+            )
+
+            for playlist in results['items']:
+                owner = playlist.get('owner') or {}
+                images = playlist.get('images') or []
+                items = playlist.get('items') or playlist.get('tracks') or {}
+
+                playlists.append({
+                    "id": playlist['id'],
+                    "name": playlist['name'],
+                    "artwork": images[0]['url'] if images else None,
+                    "track_count": items.get('total', 0),
+                    "owner_name": owner.get('display_name') or owner.get('id', 'Unknown'),
+                    "is_owner": owner.get('id') == current_user_id,
+                    "collaborative": playlist.get('collaborative', False),
+                    "spotify_url": (
+                        playlist.get('external_urls') or {}
+                    ).get('spotify')
+                })
+
+            if not results.get('next'):
+                break
+
+            offset += len(results['items'])
+
+        return jsonify(playlists)
+
+    except spotipy.SpotifyException as e:
+        app.logger.exception("Failed to retrieve Spotify playlists")
+        return jsonify({
+            "error": "Could not retrieve playlists from Spotify."
+        }), e.http_status or 500
+
+# 6. Retrieve tracks from a selected playlist
+@app.route('/api/playlists/<playlist_id>/tracks', methods=['GET'])
+def get_playlist_tracks(playlist_id):
+    sp = get_spotify_client()
+
+    if not sp:
+        return jsonify({"error": "User not authenticated"}), 401
+
+    try:
+        tracks = []
+        offset = 0
+        limit = 50
+
+        while True:
+            results = sp.playlist_items(
+                playlist_id,
+                limit=limit,
+                offset=offset,
+                additional_types=('track',)
+            )
+
+            items = results.get('items', [])
+
+            for entry in items:
+                # Spotify responses may use "item" or the older "track" key.
+                track = entry.get('item') or entry.get('track')
+
+                # Ignore unavailable tracks and local files.
+                if not track or track.get('is_local'):
+                    continue
+
+                uri = track.get('uri')
+
+                if not uri:
+                    continue
+
+                artists = track.get('artists') or []
+                album = track.get('album') or {}
+                images = album.get('images') or []
+
+                tracks.append({
+                    "id": track.get('id'),
+                    "title": track.get('name', 'Unknown track'),
+                    "artist": (
+                        artists[0]['name'] if artists else 'Unknown'
+                    ),
+                    "album_name": album.get('name', 'Unknown album'),
+                    "artwork": images[0]['url'] if images else None,
+                    "uri": uri
+                })
+
+            if not results.get('next'):
+                break
+
+            offset += len(items)
+
+        return jsonify(tracks)
+
+    except spotipy.SpotifyException as e:
+        app.logger.exception("Failed to retrieve playlist tracks")
+
+        if e.http_status == 403:
+            return jsonify({
+                "error": (
+                    "Spotify does not allow this playlist to be imported. "
+                    "Try a playlist you own or collaborate on."
+                )
+            }), 403
+
+        if e.http_status == 404:
+            return jsonify({
+                "error": "This playlist could not be found."
+            }), 404
+
+        return jsonify({
+            "error": "Could not retrieve tracks from Spotify."
+        }), e.http_status or 500
+
+# 7. Save and create a new playlist
 @app.route('/api/create-playlist', methods=['POST'])
 def create_playlist():
     sp = get_spotify_client()
