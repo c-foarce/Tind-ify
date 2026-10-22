@@ -26,12 +26,52 @@
   box-shadow: var(--shadow-overlay);
 }
 
+
 .trackTitle {
+  height: 1.3em;
   margin-bottom: var(--space-2);
   color: var(--color-text);
   font-size: var(--font-size-xl);
-  overflow-wrap: anywhere;
+  line-height: 1.3;
+  overflow: hidden;
+  white-space: nowrap;
 }
+
+.marqueeTrack {
+  display: inline-flex;
+  width: max-content;
+  white-space: nowrap;
+}
+
+.marqueeText {
+  flex-shrink: 0;
+  padding-right: var(--space-8);
+}
+
+.marqueeTrackActive {
+  animation: marquee var(--marquee-duration) linear 1s infinite;
+}
+
+.trackTitle:hover .marqueeTrackActive {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0%, 10% {
+    transform: translateX(0);
+  }
+
+  90%, 100% {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrackActive {
+    animation: none;
+  }
+}
+
 
 .artist {
   margin-bottom: var(--space-4);
