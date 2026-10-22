@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import styles from './SearchBar.module.css';
 
@@ -18,25 +17,32 @@ function SearchBar({ onSearch }) {
   return (
     <form onSubmit={handleSubmit} className={styles.searchBar}>
       <div className={styles.inputWrapper}>
-        <input
-          type="text"
-          className={styles.searchInput}
-          placeholder="Search for an album..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <label htmlFor="album-search" className={styles.searchLabel}>
+          Search albums
+        </label>
 
-        {query && (
-          <button
-            type="button"
-            className={styles.clearButton}
-            onClick={handleClear}
-            aria-label="Clear search"
-            title="Clear search"
-          >
-            ×
-          </button>
-        )}
+        <div className={styles.inputContainer}>
+          <input
+            id="album-search"
+            type="search"
+            className={styles.searchInput}
+            placeholder="Search by album name..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+
+          {query && (
+            <button
+              type="button"
+              className={styles.clearButton}
+              onClick={handleClear}
+              aria-label="Clear search"
+              title="Clear search"
+            >
+              x
+            </button>
+          )}
+        </div>
       </div>
 
       <button type="submit" className={styles.searchButton}>

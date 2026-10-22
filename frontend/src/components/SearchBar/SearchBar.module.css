@@ -1,51 +1,109 @@
-
 .searchBar {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-end;
+  gap: var(--space-3);
+  width: 100%;
 }
 
 .inputWrapper {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 500px;
+}
+
+.searchLabel {
+  padding-left: var(--space-4);
+  font-weight: 600;
+}
+
+.inputContainer {
   position: relative;
-  width: 300px;
-  max-width: 100%;
+  width: 100%;
 }
 
 .searchInput {
   box-sizing: border-box;
   width: 100%;
-  padding: 0.5rem 2.25rem 0.5rem 0.5rem;
+  padding: var(--space-3) var(--space-8) var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.searchInput:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
 .clearButton {
   position: absolute;
   top: 50%;
-  right: 0.4rem;
+  right: var(--space-3);
   transform: translateY(-50%);
+  padding: 0.15rem;
   border: none;
   background: transparent;
-  color: #666;
+  color: var(--color-text-muted);
   font-size: 1.35rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0.15rem;
 }
 
 .clearButton:hover {
-  color: #111;
+  color: var(--color-text);
 }
 
 .searchButton {
-  padding: 0.5rem 1rem;
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.searchButton:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-hover);
+}
+
+.searchButton:focus-visible,
+.clearButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 @media (max-width: 450px) {
   .searchBar {
-    width: 100%;
+    gap: var(--space-2);
   }
 
-  .inputWrapper {
-    flex: 1;
-    min-width: 0;
+  .searchButton {
+    padding-inline: var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchInput,
+  .searchButton {
+    transition: none;
   }
 }
