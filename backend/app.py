@@ -347,13 +347,48 @@ def create_playlist():
 
     if not sp:
         return jsonify({"error": "User not authenticated"}), 401
-    data = request.json or {}
-    playlist_name = data.get('name', 'My Filtered Mix')
-    playlist_description = data.get('description', '')
+
+    data = request.get_json(silent=True) or {}
+
+    playlist_name = data.get('name') or 'My Filtered Mix'
+    playlist_name = playlist_name.strip()
+    playlist_description = data.get('description') or ''
     track_uris = data.get('uris', [])
-    if not track_uris:
-        return jsonify({"error": "No tracks selected"}), 400
+
+    # Validate the playlist name.
+    if not playlist_name:
+        return jsonify({
+            "error": "Please provide a playlist name."
+        }), 400
+
+    if not isinstance(playlist_name, str):
+        return jsonify({
+            "error": "The playlist name must be text."
+        }), 400
+
+    if not isinstance(playlist_description, str):
+        return jsonify({
+            "error": "The playlist description must be text."
+        }), 400
+
+    # Validate the submitted track URIs.
+    if not isinstance(track_uris, list) or not track_uris:
+        return jsonify({
+            "error": "No tracks selected."
+        }), 400
+
+    if not all(
+        isinstance(uri, str) and uri.startswith("spotify:track:")
+        for uri in track_uris
+    ):
+        return jsonify({
+            "error": "One or more track URIs are invalid."
+        }), 400
+
+    new_playlist = None
+
     try:
+        # Create the playlist first.
         new_playlist = sp._post(
             "me/playlists",
             payload={
@@ -362,32 +397,59 @@ def create_playlist():
                 "public": True,
             },
         )
-        sp._post(
-            f"playlists/{new_playlist['id']}/items",
-            payload={"uris": track_uris},
-        )
 
-        return jsonify(
-            {
-                "status": "success",
-                "message": f"Created '{playlist_name}'!",
-                "playlist_url": new_playlist["external_urls"]["spotify"],
-            }
-        )
-    
-    except Exception as e:
-        print("Spotify playlist export error:", repr(e))
+        # Spotify accepts a maximum of 100 tracks per add-items request.
+        for start in range(0, len(track_uris), 100):
+            batch = track_uris[start:start + 100]
 
-        if hasattr(e, "http_status"):
-            print("Spotify HTTP status:", e.http_status)
+            sp._post(
+                f"playlists/{new_playlist['id']}/items",
+                payload={"uris": batch},
+            )
 
-        if hasattr(e, "msg"):
-            print("Spotify error message:", e.msg)
+        return jsonify({
+            "status": "success",
+            "message": f"Created '{playlist_name}'!",
+            "playlist_url": new_playlist["external_urls"]["spotify"],
+        })
 
-        if hasattr(e, "http_headers"):
-            print("Spotify response headers:", e.http_headers)
+    except spotipy.SpotifyException as e:
+        app.logger.exception("Spotify playlist export failed")
 
-        return jsonify({"error": str(e)}), 500
+        # Playlist creation may have succeeded before a later batch failed.
+        if new_playlist:
+            return jsonify({
+                "error": (
+                    "The playlist was created, but not all tracks "
+                    "could be added."
+                ),
+                "playlist_url": (
+                    new_playlist.get("external_urls", {}).get("spotify")
+                ),
+            }), 502
+
+        return jsonify({
+            "error": "Spotify could not create the playlist."
+        }), e.http_status or 500
+
+    except Exception:
+        app.logger.exception("Unexpected playlist export error")
+
+        if new_playlist:
+            return jsonify({
+                "error": (
+                    "The playlist was created, but not all tracks "
+                    "could be added."
+                ),
+                "playlist_url": (
+                    new_playlist.get("external_urls", {}).get("spotify")
+                ),
+            }), 500
+
+        return jsonify({
+            "error": "An unexpected error occurred while creating the playlist."
+        }), 500
+
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
