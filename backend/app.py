@@ -34,7 +34,8 @@ SCOPE = (
     "playlist-modify-public "
     "playlist-modify-private "
     "playlist-read-private "
-    "playlist-read-collaborative"
+    "playlist-read-collaborative "
+    "user-library-read"
 )
 
 def create_spotify_oauth():
@@ -268,10 +269,82 @@ def get_playlist_tracks(playlist_id):
             "error": "Could not retrieve tracks from Spotify."
         }), e.http_status or 500
 
-# 7. Save and create a new playlist
+# 7. Retreives the user's liked songs
+@app.route('/api/liked-songs', methods=['GET'])
+def get_liked_songs():
+    sp = get_spotify_client()
+
+    if not sp:
+        return jsonify({"error": "User not authenticated"}), 401
+
+    try:
+        tracks = []
+        offset = 0
+        limit = 50
+
+        while True:
+            results = sp.current_user_saved_tracks(
+                limit=limit,
+                offset=offset
+            )
+
+            items = results.get('items', [])
+
+            for entry in items:
+                track = entry.get('track')
+
+                # Ignore unavailable tracks and local files.
+                if not track or track.get('is_local'):
+                    continue
+
+                uri = track.get('uri')
+
+                if not uri:
+                    continue
+
+                artists = track.get('artists') or []
+                album = track.get('album') or {}
+                images = album.get('images') or []
+
+                tracks.append({
+                    "id": track.get('id'),
+                    "title": track.get('name', 'Unknown track'),
+                    "artist": (
+                        artists[0]['name'] if artists else 'Unknown'
+                    ),
+                    "album_name": album.get('name', 'Unknown album'),
+                    "artwork": images[0]['url'] if images else None,
+                    "uri": uri
+                })
+
+            if not results.get('next'):
+                break
+
+            offset += len(items)
+
+        return jsonify(tracks)
+
+    except spotipy.SpotifyException as e:
+        app.logger.exception("Failed to retrieve Liked Songs")
+
+        if e.http_status == 403:
+            return jsonify({
+                "error": (
+                    "Spotify did not allow access to your Liked Songs. "
+                    "Reconnect your account and try again."
+                )
+            }), 403
+
+        return jsonify({
+            "error": "Could not retrieve your Liked Songs."
+        }), e.http_status or 500
+
+
+# 8. Save and create a new playlist
 @app.route('/api/create-playlist', methods=['POST'])
 def create_playlist():
     sp = get_spotify_client()
+
     if not sp:
         return jsonify({"error": "User not authenticated"}), 401
     data = request.json or {}
