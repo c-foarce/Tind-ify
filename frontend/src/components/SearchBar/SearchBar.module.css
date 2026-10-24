@@ -5,6 +5,10 @@
   width: 100%;
 }
 
+.liveSearchBar .inputWrapper {
+  max-width: none;
+}
+
 .inputWrapper {
   display: flex;
   flex: 1;
@@ -38,14 +42,37 @@
     box-shadow var(--transition-fast);
 }
 
+/* Hide the browser's native clear button. */
+.searchInput::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .searchInput::placeholder {
   color: var(--color-text-muted);
 }
 
-.searchInput:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--color-primary);
+/* Preserve the dark theme when Chrome autofills the input. */
+.searchInput:-webkit-autofill,
+.searchInput:-webkit-autofill:hover,
+.searchInput:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+  transition: background-color 9999s ease-out;
+  box-shadow: inset 0 0 0 1000px var(--color-surface);
 }
+
+/* Preserve the green focus indicator, including during autofill. */
+.searchInput:focus,
+.searchInput:-webkit-autofill:focus {
+  outline: none;
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+  box-shadow:
+    inset 0 0 0 2px var(--color-primary),
+    inset 0 0 0 1000px var(--color-surface);
+}
+
 
 .clearButton {
   position: absolute;
@@ -102,6 +129,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .searchInput,
   .searchButton {
     transition: none;

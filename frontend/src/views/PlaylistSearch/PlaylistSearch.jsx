@@ -1,6 +1,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../services/api';
+import SearchBar from '../../components/SearchBar/SearchBar';
+import PlaylistResults from '../../components/PlaylistResults/PlaylistResults';
 import styles from './PlaylistSearch.module.css';
 
 function PlaylistSearch({ onSelectPlaylist }) {
@@ -75,19 +77,13 @@ function PlaylistSearch({ onSelectPlaylist }) {
 
   return (
     <section className={styles.playlistSearch}>
-      <div className={styles.searchField}>
-        <label htmlFor="playlist-search">
-          Search playlists
-        </label>
-
-        <input
-          id="playlist-search"
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search by playlist name..."
-        />
-      </div>
+      <SearchBar
+        mode="live"
+        id="playlist-search"
+        label="Search playlists"
+        placeholder="Search by playlist name..."
+        onSearch={setSearchQuery}
+      />
 
       {error && (
         <p className={styles.error} role="alert">
@@ -95,58 +91,11 @@ function PlaylistSearch({ onSelectPlaylist }) {
         </p>
       )}
 
-      <p className={styles.resultCount}>
-        {filteredPlaylists.length} playlist
-        {filteredPlaylists.length === 1 ? '' : 's'} found
-      </p>
-
-      {filteredPlaylists.length === 0 ? (
-        <p className={styles.message}>
-          No playlists match your search.
-        </p>
-      ) : (
-        <div className={styles.playlistGrid}>
-          {filteredPlaylists.map((playlist) => (
-            <button
-              key={playlist.id}
-              type="button"
-              className={styles.playlistCard}
-              onClick={() => handleSelectPlaylist(playlist)}
-              disabled={loadingPlaylistId !== null}
-            >
-              {playlist.artwork ? (
-                <img
-                  src={playlist.artwork}
-                  alt=""
-                  className={styles.artwork}
-                />
-              ) : (
-                <div className={styles.artworkPlaceholder}>
-                  No artwork
-                </div>
-              )}
-
-              <span className={styles.playlistName}>
-                {playlist.name}
-              </span>
-
-              <span className={styles.playlistDetails}>
-                {playlist.owner_name}
-              </span>
-
-              <span className={styles.playlistDetails}>
-                {playlist.track_count} tracks
-              </span>
-
-              {loadingPlaylistId === playlist.id && (
-                <span className={styles.loadingLabel}>
-                  Loading tracks...
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+      <PlaylistResults
+        playlists={filteredPlaylists}
+        loadingPlaylistId={loadingPlaylistId}
+        onSelectPlaylist={handleSelectPlaylist}
+      />
     </section>
   );
 }

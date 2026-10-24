@@ -1,12 +1,33 @@
+
 import { useState } from 'react';
+import clsx from 'clsx';
 import styles from './SearchBar.module.css';
 
-function SearchBar({ onSearch }) {
+function SearchBar({
+  onSearch,
+  mode = 'submit',
+  id = 'album-search',
+  label = 'Search albums',
+  placeholder = 'Search by album name...',
+}) {
   const [query, setQuery] = useState('');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSearch(query);
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (mode === 'submit') {
+      onSearch(query);
+    }
+  };
+
+  const handleChange = (event) => {
+    const nextQuery = event.target.value;
+
+    setQuery(nextQuery);
+
+    if (mode === 'live') {
+      onSearch(nextQuery);
+    }
   };
 
   const handleClear = () => {
@@ -15,20 +36,26 @@ function SearchBar({ onSearch }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.searchBar}>
+    <form
+      onSubmit={handleSubmit}
+      className={clsx(
+        styles.searchBar,
+        mode === 'live' && styles.liveSearchBar
+      )}
+    >
       <div className={styles.inputWrapper}>
-        <label htmlFor="album-search" className={styles.searchLabel}>
-          Search albums
+        <label htmlFor={id} className={styles.searchLabel}>
+          {label}
         </label>
 
         <div className={styles.inputContainer}>
           <input
-            id="album-search"
+            id={id}
             type="search"
             className={styles.searchInput}
-            placeholder="Search by album name..."
+            placeholder={placeholder}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleChange}
           />
 
           {query && (
@@ -36,8 +63,8 @@ function SearchBar({ onSearch }) {
               type="button"
               className={styles.clearButton}
               onClick={handleClear}
-              aria-label="Clear search"
-              title="Clear search"
+              aria-label={`Clear ${label.toLowerCase()}`}
+              title={`Clear ${label.toLowerCase()}`}
             >
               x
             </button>
@@ -45,9 +72,11 @@ function SearchBar({ onSearch }) {
         </div>
       </div>
 
-      <button type="submit" className={styles.searchButton}>
-        Search
-      </button>
+      {mode === 'submit' && (
+        <button type="submit" className={styles.searchButton}>
+          Search
+        </button>
+      )}
     </form>
   );
 }

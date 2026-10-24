@@ -1,141 +1,17 @@
+
 .playlistSearch {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    margin-bottom: var(--space-8);
-}
-
-.searchField {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-}
-
-.searchField label {
-    padding-left: var(--space-4);
-}
-
-.searchField label,
-.filters legend {
-    font-weight: 600;
-}
-
-.searchField input {
-    box-sizing: border-box;
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-pill);
-    background: var(--color-surface);
-    color: var(--color-text);
-    font: inherit;
-}
-
-.searchField input:focus-visible {
-    outline: none;
-    box-shadow: inset 0 0 0 2px var(--color-primary);
-}
-
-.resultCount {
-    margin: 0;
-    color: var(--color-text-muted);
-    font-size: var(--font-size-sm);
-}
-
-.playlistGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--space-4);
-}
-
-.playlistCard {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-    color: var(--color-text);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition:
-        border-color var(--transition-fast),
-        background var(--transition-fast);
-}
-
-.playlistCard:hover:not(:disabled) {
-    border-color: var(--color-primary);
-    background: var(--color-surface-hover);
-}
-
-.playlistCard:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 3px;
-}
-
-.playlistCard:disabled {
-    cursor: wait;
-    opacity: 0.7;
-}
-
-.artwork,
-.artworkPlaceholder {
-    width: 100%;
-    aspect-ratio: 1;
-    border-radius: var(--radius-md);
-}
-
-.artwork {
-    object-fit: cover;
-}
-
-.artworkPlaceholder {
-    display: grid;
-    place-items: center;
-    background: var(--color-surface-hover);
-    color: var(--color-text-muted);
-    font-size: var(--font-size-sm);
-}
-
-.playlistName {
-    width: 100%;
-    overflow-wrap: anywhere;
-    font-weight: 600;
-}
-
-.playlistDetails {
-    color: var(--color-text-muted);
-    font-size: var(--font-size-sm);
-}
-
-.loadingLabel {
-    color: var(--color-primary);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
 }
 
 .message {
-    margin: 0;
-    color: var(--color-text-muted);
+  margin: 0;
+  color: var(--color-text-muted);
 }
 
 .error {
-    margin: 0;
-    color: var(--color-error);
-}
-
-@media (max-width: 480px) {
-    .playlistGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-3);
-    }
-
-    .filters {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+  margin: 0;
+  color: var(--color-error);
 }
