@@ -4,6 +4,7 @@ import os
 from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
+from requests.exceptions import Timeout
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
@@ -60,7 +61,10 @@ def get_spotify_client():
     if not token_info:
         return None
 
-    return spotipy.Spotify(auth_manager=sp_oauth)
+    return spotipy.Spotify(
+        auth_manager=sp_oauth,
+        requests_timeout=20
+    )
 
 # 1. Trigger User Authentication Flow
 @app.route('/api/login')
@@ -97,56 +101,109 @@ def callback():
 # 3. Search endpoint
 @app.route('/api/search', methods=['GET'])
 def search_albums():
-    sp = get_spotify_client()
-    if not sp:
-        return jsonify({"error": "User not authenticated"}), 401
-    query = request.args.get('q', '')
-    if not query:
-        return jsonify([])
-    results = sp.search(q=query, type='album', limit=5)
-    albums = []
-    for item in results['albums']['items']:
-        albums.append({
-            "id": item['id'],
-            "name": item['name'],
-            "artist": item['artists'][0]['name'] if item['artists'] else 'Unknown',
-            "artwork": item['images'][0]['url'] if item['images'] else None,
-            "release_date": item['release_date']
-        })
-    return jsonify(albums)
+    try:
+        sp = get_spotify_client()
+
+        if not sp:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        query = request.args.get('q', '').strip()
+
+        if not query:
+            return jsonify([])
+
+        results = sp.search(q=query, type='album', limit=5)
+        albums = []
+
+        for item in results['albums']['items']:
+            albums.append({
+                "id": item['id'],
+                "name": item['name'],
+                "artist": (
+                    item['artists'][0]['name']
+                    if item['artists'] else 'Unknown'
+                ),
+                "artwork": (
+                    item['images'][0]['url']
+                    if item['images'] else None
+                ),
+                "release_date": item['release_date']
+            })
+
+        return jsonify(albums)
+
+    except spotipy.SpotifyException as e:
+        app.logger.exception("Spotify album search failed")
+        return jsonify({
+            "error": "Could not search Spotify. Please try again."
+        }), e.http_status or 500
+
+    except Exception:
+        app.logger.exception("Unexpected album search error")
+        return jsonify({
+            "error": "An unexpected error occurred during album search."
+        }), 500
+
 
 # 4. Tracks list retrieval endpoint
 @app.route('/api/album-tracks', methods=['GET'])
 def get_album_tracks():
-    sp = get_spotify_client()
-    if not sp:
-        return jsonify({"error": "User not authenticated"}), 401
-    album_id = request.args.get('id', '')
-    if not album_id:
-        return jsonify({"error": "Missing album ID"}), 400
-    album_details = sp.album(album_id)
-    track_results = sp.album_tracks(album_id, limit=50)
-    flattened_tracks = []
-    for track in track_results['items']:
-        flattened_tracks.append({
-            "id": track['id'],
-            "title": track['name'],
-            "artist": track['artists'][0]['name'] if track['artists'] else 'Unknown',
-            "album_name": album_details['name'],
-            "artwork": album_details['images'][0]['url'] if album_details['images'] else None,
-            "uri": track['uri']
-        })
-    return jsonify(flattened_tracks)
+    try:
+        sp = get_spotify_client()
+
+        if not sp:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        album_id = request.args.get('id', '').strip()
+
+        if not album_id:
+            return jsonify({"error": "Missing album ID"}), 400
+
+        album_details = sp.album(album_id)
+        track_results = sp.album_tracks(album_id, limit=50)
+        flattened_tracks = []
+
+        for track in track_results['items']:
+            flattened_tracks.append({
+                "id": track['id'],
+                "title": track['name'],
+                "artist": (
+                    track['artists'][0]['name']
+                    if track['artists'] else 'Unknown'
+                ),
+                "album_name": album_details['name'],
+                "artwork": (
+                    album_details['images'][0]['url']
+                    if album_details['images'] else None
+                ),
+                "uri": track['uri']
+            })
+
+        return jsonify(flattened_tracks)
+
+    except spotipy.SpotifyException as e:
+        app.logger.exception("Spotify album track retrieval failed")
+        return jsonify({
+            "error": "Could not retrieve album tracks from Spotify."
+        }), e.http_status or 500
+
+    except Exception:
+        app.logger.exception("Unexpected album track retrieval error")
+        return jsonify({
+            "error": "An unexpected error occurred while retrieving album tracks."
+        }), 500
+
 
 # 5. Retrieve the current user's playlists
+
 @app.route('/api/playlists', methods=['GET'])
 def get_playlists():
-    sp = get_spotify_client()
-
-    if not sp:
-        return jsonify({"error": "User not authenticated"}), 401
-
     try:
+        sp = get_spotify_client()
+
+        if not sp:
+            return jsonify({"error": "User not authenticated"}), 401
+
         current_user = sp.current_user()
         current_user_id = current_user['id']
 
@@ -194,12 +251,12 @@ def get_playlists():
 # 6. Retrieve tracks from a selected playlist
 @app.route('/api/playlists/<playlist_id>/tracks', methods=['GET'])
 def get_playlist_tracks(playlist_id):
-    sp = get_spotify_client()
-
-    if not sp:
-        return jsonify({"error": "User not authenticated"}), 401
-
     try:
+        sp = get_spotify_client()
+
+        if not sp:
+            return jsonify({"error": "User not authenticated"}), 401
+
         tracks = []
         offset = 0
         limit = 50
@@ -272,12 +329,12 @@ def get_playlist_tracks(playlist_id):
 # 7. Retreives the user's liked songs
 @app.route('/api/liked-songs', methods=['GET'])
 def get_liked_songs():
-    sp = get_spotify_client()
-
-    if not sp:
-        return jsonify({"error": "User not authenticated"}), 401
-
     try:
+        sp = get_spotify_client()
+
+        if not sp:
+            return jsonify({"error": "User not authenticated"}), 401
+
         tracks = []
         offset = 0
         limit = 50
@@ -324,6 +381,15 @@ def get_liked_songs():
 
         return jsonify(tracks)
 
+    except Timeout:
+        app.logger.exception("Spotify Liked Songs request timed out")
+        return jsonify({
+            "error": (
+                "Spotify took too long to load your Liked Songs. "
+                "Please try again."
+            )
+        }), 504
+
     except spotipy.SpotifyException as e:
         app.logger.exception("Failed to retrieve Liked Songs")
 
@@ -343,51 +409,58 @@ def get_liked_songs():
 # 8. Save and create a new playlist
 @app.route('/api/create-playlist', methods=['POST'])
 def create_playlist():
-    sp = get_spotify_client()
-
-    if not sp:
-        return jsonify({"error": "User not authenticated"}), 401
-
-    data = request.get_json(silent=True) or {}
-
-    playlist_name = data.get('name') or 'My Filtered Mix'
-    playlist_name = playlist_name.strip()
-    playlist_description = data.get('description') or ''
-    track_uris = data.get('uris', [])
-
-    # Validate the playlist name.
-    if not playlist_name:
-        return jsonify({
-            "error": "Please provide a playlist name."
-        }), 400
-
-    if not isinstance(playlist_name, str):
-        return jsonify({
-            "error": "The playlist name must be text."
-        }), 400
-
-    if not isinstance(playlist_description, str):
-        return jsonify({
-            "error": "The playlist description must be text."
-        }), 400
-
-    # Validate the submitted track URIs.
-    if not isinstance(track_uris, list) or not track_uris:
-        return jsonify({
-            "error": "No tracks selected."
-        }), 400
-
-    if not all(
-        isinstance(uri, str) and uri.startswith("spotify:track:")
-        for uri in track_uris
-    ):
-        return jsonify({
-            "error": "One or more track URIs are invalid."
-        }), 400
-
     new_playlist = None
 
     try:
+        sp = get_spotify_client()
+
+        if not sp:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        data = request.get_json(silent=True)
+
+        if not isinstance(data, dict):
+            return jsonify({
+                "error": "Invalid request data."
+            }), 400
+
+        # Validate the playlist name before using string methods.
+        playlist_name = data.get('name', 'My Filtered Mix')
+
+        if not isinstance(playlist_name, str):
+            return jsonify({
+                "error": "The playlist name must be text."
+            }), 400
+
+        playlist_name = playlist_name.strip()
+
+        if not playlist_name:
+            return jsonify({
+                "error": "Please provide a playlist name."
+            }), 400
+
+        playlist_description = data.get('description') or ''
+        track_uris = data.get('uris', [])
+
+        if not isinstance(playlist_description, str):
+            return jsonify({
+                "error": "The playlist description must be text."
+            }), 400
+
+        # Validate the submitted track URIs.
+        if not isinstance(track_uris, list) or not track_uris:
+            return jsonify({
+                "error": "No tracks selected."
+            }), 400
+
+        if not all(
+            isinstance(uri, str) and uri.startswith("spotify:track:")
+            for uri in track_uris
+        ):
+            return jsonify({
+                "error": "One or more track URIs are invalid."
+            }), 400
+
         # Create the playlist first.
         new_playlist = sp._post(
             "me/playlists",
@@ -447,7 +520,9 @@ def create_playlist():
             }), 500
 
         return jsonify({
-            "error": "An unexpected error occurred while creating the playlist."
+            "error": (
+                "An unexpected error occurred while creating the playlist."
+            )
         }), 500
 
 
