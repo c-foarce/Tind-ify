@@ -292,6 +292,7 @@ function App() {
 
           <CardSwiper
             tracks={activeTracks}
+            playlistQueue={playlistQueue}
             onDiscard={handleDiscardTrack}
             onKeep={handleKeepTrack}
           />
