@@ -51,17 +51,29 @@ function App() {
     }
   };
 
+
   const handleSelectAlbum = async (albumId) => {
     try {
       const response = await api.get(
         `/album-tracks?id=${encodeURIComponent(albumId)}`
       );
+
       setActiveTracks(response.data);
       setSearchResults([]);
+      setIsSearchExpanded(false);
+
+      // Wait for the search panel to collapse, then scroll to the swiper.
+      setTimeout(() => {
+        filterSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 300);
     } catch (err) {
       console.error('Failed to load album tracks', err);
     }
   };
+
 
   const handleSelectPlaylist = async (playlistId) => {
     try {
@@ -271,15 +283,15 @@ function App() {
           ref={filterSectionRef}
           className={styles.filterSection}
         >
-          <div className={styles.filterHeader}>
-            <h2 className={styles.sectionHeading}>
-              Tracks to Filter
-              <span className={styles.trackCount}>
-                {activeTracks.length} left
-              </span>
-            </h2>
+          {activeTracks.length > 0 && (
+            <div className={styles.filterHeader}>
+              <h2 className={styles.sectionHeading}>
+                Tracks to Filter
+                <span className={styles.trackCount}>
+                  {activeTracks.length} left
+                </span>
+              </h2>
 
-            {activeTracks.length > 0 && (
               <button
                 type="button"
                 className={styles.clearQueueButton}
@@ -287,8 +299,8 @@ function App() {
               >
                 Clear filter queue
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           <CardSwiper
             tracks={activeTracks}
