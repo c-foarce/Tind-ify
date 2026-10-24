@@ -33,6 +33,11 @@
     border-color var(--transition-fast);
 }
 
+.connectionButtonLoading {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .connectionButton:hover:not(:disabled) {
   border-color: var(--color-primary);
 }

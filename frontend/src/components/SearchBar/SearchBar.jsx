@@ -9,6 +9,7 @@ function SearchBar({
   id = 'album-search',
   label = 'Search albums',
   placeholder = 'Search by album name...',
+  isLoading = false,
 }) {
   const [query, setQuery] = useState('');
 
@@ -73,8 +74,15 @@ function SearchBar({
       </div>
 
       {mode === 'submit' && (
-        <button type="submit" className={styles.searchButton}>
-          Search
+        <button
+          type="submit"
+          className={clsx(
+            styles.searchButton,
+            isLoading && styles.searchButtonLoading
+          )}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Searching...' : 'Search'}
         </button>
       )}
     </form>

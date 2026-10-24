@@ -107,6 +107,11 @@
     border-color var(--transition-fast);
 }
 
+.searchButtonLoading {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .searchButton:hover {
   border-color: var(--color-primary);
   background: var(--color-surface-hover);

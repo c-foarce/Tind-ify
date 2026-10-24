@@ -22,6 +22,7 @@ function App() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(true);
   const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(false);
   const [likedSongsError, setLikedSongsError] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   const filterSectionRef = useRef(null)
 
@@ -41,13 +42,18 @@ function App() {
   };
 
   const handleSearch = async (query) => {
+    setIsSearching(true);
+
     try {
       const response = await api.get(
         `/search?q=${encodeURIComponent(query)}`
       );
+
       setSearchResults(response.data);
     } catch (err) {
       console.error('Search failed.', err);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -243,6 +249,7 @@ function App() {
                 onSearch={handleSearch}
                 albums={searchResults}
                 onSelectAlbum={handleSelectAlbum}
+                isSearching={isSearching}
               />
             )}
 
@@ -258,7 +265,10 @@ function App() {
 
                 <button
                   type="button"
-                  className={styles.connectionButton}
+                  className={clsx(
+                    styles.connectionButton,
+                    isLoadingLikedSongs && styles.connectionButtonLoading
+                  )}
                   onClick={handleLoadLikedSongs}
                   disabled={isLoadingLikedSongs}
                 >
