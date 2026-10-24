@@ -1,4 +1,3 @@
-
 .card {
   display: flex;
   justify-content: center;
@@ -26,6 +25,20 @@
   box-shadow: var(--shadow-overlay);
 }
 
+.duplicateArtwork {
+  outline: 3px solid #3b82f6;
+  outline-offset: 3px;
+}
+
+.confirmDuplicateButton {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.cancelDuplicateButton {
+  background: #1d4ed8;
+  color: #ffffff;
+}
 
 .trackTitle {
   height: 1.3em;
@@ -57,11 +70,14 @@
 }
 
 @keyframes marquee {
-  0%, 10% {
+
+  0%,
+  10% {
     transform: translateX(0);
   }
 
-  90%, 100% {
+  90%,
+  100% {
     transform: translateX(-50%);
   }
 }
@@ -82,18 +98,20 @@
 .actions {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-4);
   margin-top: var(--space-6);
 }
 
 .button {
-  min-width: 120px;
-  padding: var(--space-3) var(--space-6);
+  flex: 0 0 160px;
+  padding: var(--space-3) var(--space-3);
   border: none;
   border-radius: var(--radius-pill);
   color: #ffffff;
   font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
   transition:
     transform var(--transition-fast),
     filter var(--transition-fast);
@@ -141,8 +159,9 @@
   }
 
   .button {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
-    padding: var(--space-3);
+    padding: var(--space-3) var(--space-2);
+    font-size: var(--font-size-sm);
   }
 }

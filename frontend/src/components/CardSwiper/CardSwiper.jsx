@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './CardSwiper.module.css';
 import clsx from 'clsx';
 
-function CardSwiper({ tracks, onDiscard, onKeep }) {
-
+function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
   const titleRef = useRef(null);
 
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [marqueeDuration, setMarqueeDuration] = useState(20);
+  const [isConfirmingDuplicate, setIsConfirmingDuplicate] = useState(false);
 
   const currentTrack = tracks[0];
 
@@ -26,7 +26,7 @@ function CardSwiper({ tracks, onDiscard, onKeep }) {
 
       setIsOverflowing(overflowDistance > 0);
 
-      // Approximately 35 pixels of travel per second.
+      // Approximately 40 pixels of travel per second.
       const speed = 40;
       const duration = (overflowDistance / 2) / speed;
 
@@ -41,13 +41,59 @@ function CardSwiper({ tracks, onDiscard, onKeep }) {
     return () => observer.disconnect();
   }, [currentTrack?.title]);
 
+  useEffect(() => {
+    setIsConfirmingDuplicate(false);
+  }, [currentTrack?.id, currentTrack?.uri]);
+
   if (tracks.length === 0) {
-    return (
-      <p className={styles.emptyMessage}>
-        Search and pick an album above to begin filtering songs.
-      </p>
-    );
+    return null
+    // fix tidier later, for now this works. need SOMETHING, not just undefined
+    //  (
+    //   <p className={styles.emptyMessage}>
+    //     Search and pick an album above to begin filtering songs.
+    //   </p>
+    // );
   }
+
+  const isDuplicate = (track) => {
+    return playlistQueue.some((queuedTrack) => {
+      // Compare Spotify IDs whenever both tracks have one.
+      if (track.id && queuedTrack.id) {
+        return track.id === queuedTrack.id;
+      }
+
+      // Fall back to Spotify URI if either ID is unavailable.
+      return Boolean(
+        track.uri &&
+        queuedTrack.uri &&
+        track.uri === queuedTrack.uri
+      );
+    });
+  };
+
+  const handleKeepClick = () => {
+    if (isConfirmingDuplicate) {
+      onKeep(currentTrack);
+      setIsConfirmingDuplicate(false);
+      return;
+    }
+
+    if (isDuplicate(currentTrack)) {
+      setIsConfirmingDuplicate(true);
+      return;
+    }
+
+    onKeep(currentTrack);
+  };
+
+  const handleDiscardClick = () => {
+    if (isConfirmingDuplicate) {
+      setIsConfirmingDuplicate(false);
+      return;
+    }
+
+    onDiscard();
+  };
 
   return (
     <div className={styles.card}>
@@ -55,7 +101,10 @@ function CardSwiper({ tracks, onDiscard, onKeep }) {
         <img
           src={currentTrack.artwork}
           alt={`${currentTrack.title} album artwork`}
-          className={styles.artwork}
+          className={clsx(
+            styles.artwork,
+            isConfirmingDuplicate && styles.duplicateArtwork
+          )}
         />
 
         <h2
@@ -93,17 +142,29 @@ function CardSwiper({ tracks, onDiscard, onKeep }) {
 
         <div className={styles.actions}>
           <button
-            onClick={onDiscard}
-            className={clsx(styles.button, styles.discardButton)}
+            onClick={handleDiscardClick}
+            className={clsx(
+              styles.button,
+              isConfirmingDuplicate
+                ? styles.cancelDuplicateButton
+                : styles.discardButton
+            )}
           >
-            Discard
+            {isConfirmingDuplicate ? 'Cancel' : 'Discard'}
           </button>
 
           <button
-            onClick={() => onKeep(currentTrack)}
-            className={clsx(styles.button, styles.keepButton)}
+            onClick={handleKeepClick}
+            className={clsx(
+              styles.button,
+              isConfirmingDuplicate
+                ? styles.confirmDuplicateButton
+                : styles.keepButton
+            )}
           >
-            Keep Track
+            {isConfirmingDuplicate
+              ? 'Keep duplicate?'
+              : 'Keep Track'}
           </button>
         </div>
       </div>
