@@ -36,6 +36,16 @@
   outline-offset: 2px;
 }
 
+.nameInput:-webkit-autofill,
+.nameInput:-webkit-autofill:hover,
+.nameInput:-webkit-autofill:focus,
+.nameInput:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg) inset;
+  transition: background-color 9999s ease-out;
+}
+
 .queueHeading {
   display: flex;
   align-items: center;
@@ -179,12 +189,6 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 480px) {
-  .panel {
-    padding: var(--space-4);
-  }
-}
-
 .successMessage {
   position: relative;
   margin-top: 1rem;
@@ -252,4 +256,10 @@
 
 .dismissButton:hover {
   opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .panel {
+    padding: var(--space-4);
+  }
 }
