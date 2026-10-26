@@ -3,19 +3,35 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './CardSwiper.module.css';
 import clsx from 'clsx';
 
-function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
+function CardSwiper({
+  tracks,
+  playlistQueue,
+  onDiscard,
+  onKeep,
+  isExiting = false,
+}) {
   const titleRef = useRef(null);
 
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [marqueeDuration, setMarqueeDuration] = useState(20);
   const [isConfirmingDuplicate, setIsConfirmingDuplicate] = useState(false);
+  const [previousTrack, setPreviousTrack] = useState(null);
 
   const currentTrack = tracks[0];
+
+  // Retain the last track so it remains visible during the exit animation.
+  useEffect(() => {
+    if (currentTrack) {
+      setPreviousTrack(currentTrack);
+    }
+  }, [currentTrack]);
+
+  const displayedTrack = currentTrack || previousTrack;
 
   useEffect(() => {
     const titleElement = titleRef.current;
 
-    if (!titleElement || !currentTrack) {
+    if (!titleElement || !displayedTrack) {
       setIsOverflowing(false);
       return;
     }
@@ -39,30 +55,18 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
     observer.observe(titleElement);
 
     return () => observer.disconnect();
-  }, [currentTrack?.title]);
+  }, [displayedTrack?.title]);
 
   useEffect(() => {
     setIsConfirmingDuplicate(false);
   }, [currentTrack?.id, currentTrack?.uri]);
 
-  if (tracks.length === 0) {
-    return null
-    // fix tidier later, for now this works. need SOMETHING, not just undefined
-    //  (
-    //   <p className={styles.emptyMessage}>
-    //     Search and pick an album above to begin filtering songs.
-    //   </p>
-    // );
-  }
-
   const isDuplicate = (track) => {
     return playlistQueue.some((queuedTrack) => {
-      // Compare Spotify IDs whenever both tracks have one.
       if (track.id && queuedTrack.id) {
         return track.id === queuedTrack.id;
       }
 
-      // Fall back to Spotify URI if either ID is unavailable.
       return Boolean(
         track.uri &&
         queuedTrack.uri &&
@@ -72,6 +76,8 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
   };
 
   const handleKeepClick = () => {
+    if (isExiting || !currentTrack) return;
+
     if (isConfirmingDuplicate) {
       onKeep(currentTrack);
       setIsConfirmingDuplicate(false);
@@ -87,6 +93,8 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
   };
 
   const handleDiscardClick = () => {
+    if (isExiting || !currentTrack) return;
+
     if (isConfirmingDuplicate) {
       setIsConfirmingDuplicate(false);
       return;
@@ -95,12 +103,17 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
     onDiscard();
   };
 
+  // Safe fallback if the component is rendered without any track.
+  if (!displayedTrack) {
+    return null;
+  }
+
   return (
     <div className={styles.card}>
       <div className={styles.cardContent}>
         <img
-          src={currentTrack.artwork}
-          alt={`${currentTrack.title} album artwork`}
+          src={displayedTrack.artwork}
+          alt={`${displayedTrack.title} album artwork`}
           className={clsx(
             styles.artwork,
             isConfirmingDuplicate && styles.duplicateArtwork
@@ -110,7 +123,7 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
         <h2
           ref={titleRef}
           className={styles.trackTitle}
-          title={currentTrack.title}
+          title={displayedTrack.title}
         >
           <span
             className={clsx(
@@ -122,7 +135,7 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
             }}
           >
             <span className={styles.marqueeText}>
-              {currentTrack.title}
+              {displayedTrack.title}
             </span>
 
             {isOverflowing && (
@@ -130,19 +143,20 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
                 className={styles.marqueeText}
                 aria-hidden="true"
               >
-                {currentTrack.title}
+                {displayedTrack.title}
               </span>
             )}
           </span>
         </h2>
 
         <p className={styles.artist}>
-          {currentTrack.artist}
+          {displayedTrack.artist}
         </p>
 
         <div className={styles.actions}>
           <button
             onClick={handleDiscardClick}
+            disabled={isExiting}
             className={clsx(
               styles.button,
               isConfirmingDuplicate
@@ -155,6 +169,7 @@ function CardSwiper({ tracks, playlistQueue, onDiscard, onKeep }) {
 
           <button
             onClick={handleKeepClick}
+            disabled={isExiting}
             className={clsx(
               styles.button,
               isConfirmingDuplicate

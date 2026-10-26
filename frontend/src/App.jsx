@@ -54,6 +54,20 @@ function App() {
       });
   }, []);
 
+  useEffect(() => {
+    let timeoutId;
+
+    if (activeTracks.length > 0) {
+      setIsFilterSectionExisting(true);
+    } else {
+      timeoutId = setTimeout(() => {
+        setIsFilterSectionExisting(false);
+      }, 250);
+    }
+
+    return () => clearTimeout(timeoutId);
+  }, [activeTracks.length]);
+
   const handleLogin = () => {
     window.location.href = 'http://127.0.0.1:5000/api/login';
   };
@@ -339,12 +353,22 @@ function App() {
             </div>
           )}
 
-          <CardSwiper
-            tracks={activeTracks}
-            playlistQueue={playlistQueue}
-            onDiscard={handleDiscardTrack}
-            onKeep={handleKeepTrack}
-          />
+          {isFilterSectionExisting && (
+            <div
+              className={clsx(
+                styles.filterCardContainer,
+                activeTracks.length === 0 && styles.filterCardContainerExiting
+              )}
+            >
+              <CardSwiper
+                tracks={activeTracks}
+                playlistQueue={playlistQueue}
+                onDiscard={handleDiscardTrack}
+                onKeep={handleKeepTrack}
+                isExiting={activeTracks.length === 0}
+              />
+            </div>
+          )}
         </div>
 
         <ExportPanel

@@ -73,6 +73,26 @@
   scroll-margin-top: var(--space-4);
 }
 
+.filterCardContainer {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 250ms ease,
+    opacity 250ms ease;
+}
+
+.filterCardContainerExiting {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.filterCardContainer > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .filterHeader {
   display: flex;
   align-items: center;
