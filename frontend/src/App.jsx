@@ -11,20 +11,37 @@ import styles from './App.module.css';
 
 function App() {
 
-  const [searchResults, setSearchResults] = useState([]);
-  const [activeTracks, setActiveTracks] = useState([]);
-  const [playlistQueue, setPlaylistQueue] = useState([]);
-  const [playlistName, setPlaylistName] = useState('My Swiped Playlist');
-  const [playlistDescription, setPlaylistDescription] = useState('');
+  // Authentication
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState(null);
+
+  // Search results and search controls
+  const [searchResults, setSearchResults] = useState([]);
   const [trackSource, setTrackSource] = useState('albums');
   const [isSearchExpanded, setIsSearchExpanded] = useState(true);
-  const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(false);
-  const [likedSongsError, setLikedSongsError] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  const filterSectionRef = useRef(null)
+  // Track filtering and playlist queue
+  const [activeTracks, setActiveTracks] = useState([]);
+  const [playlistQueue, setPlaylistQueue] = useState([]);
+
+  // Liked Songs loading and error handling
+  const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(false);
+  const [likedSongsError, setLikedSongsError] = useState('');
+
+  // Playlist export and feedback
+  const [playlistName, setPlaylistName] = useState('My Swiped Playlist');
+  const [playlistDescription, setPlaylistDescription] = useState('');
+  const [exportSuccess, setExportSuccess] = useState(null);
+  const [exportError, setExportError] = useState(null);
+
+  // Filter section animation
+  const [isFilterSectionExisting, setIsFilterSectionExisting] = useState(
+    activeTracks.length > 0
+  );
+
+  // DOM references
+  const filterSectionRef = useRef(null);
+
 
 
   useEffect(() => {
