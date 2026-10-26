@@ -173,6 +173,7 @@ function App() {
     );
   };
 
+
   const handleSavePlaylist = async () => {
     if (playlistQueue.length === 0) {
       alert('Add some tracks first!');
@@ -180,6 +181,7 @@ function App() {
     }
 
     setExportSuccess(null);
+    setExportError(null);
 
     try {
       const response = await api.post('/create-playlist', {
@@ -199,8 +201,16 @@ function App() {
       setPlaylistDescription('');
     } catch (err) {
       console.error('Failed to export playlist', err);
+
+      setExportError({
+        message:
+          err.response?.data?.error ||
+          'Failed to export the playlist. Please try again.',
+        url: err.response?.data?.playlist_url || null,
+      });
     }
   };
+
 
   return (
     <main className={styles.app}>
@@ -346,6 +356,7 @@ function App() {
           onRemoveTrack={handleRemoveTrack}
           onSave={handleSavePlaylist}
           exportSuccess={exportSuccess}
+          exportError={exportError}
         />
       </section>
     </main>

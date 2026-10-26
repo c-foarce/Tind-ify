@@ -11,6 +11,7 @@ function ExportPanel({
   onRemoveTrack,
   onSave,
   exportSuccess,
+  exportError,
 }) {
 
   const [showSuccess, setShowSuccess] = useState(true);
@@ -151,7 +152,21 @@ function ExportPanel({
         </div>
       )}
 
+      {exportError && (
+        <div className={styles.errorMessage} role="alert">
+          <p>{exportError.message}</p>
 
+          {exportError.url && (
+            <a
+              href={exportError.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open partially exported playlist on Spotify
+            </a>
+          )}
+        </div>
+      )}
     </aside>
   );
 }
