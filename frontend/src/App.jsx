@@ -1,11 +1,16 @@
+
 import { useRef, useState, useEffect } from 'react';
+
 import clsx from 'clsx';
+
 import api from './services/api';
+
 import CardSwiper from './components/CardSwiper/CardSwiper';
 import ExportPanel from './components/ExportPanel/ExportPanel';
 import TrackSourceSelector from './components/TrackSourceSelector/TrackSourceSelector';
 import AlbumSearch from './views/AlbumSearch/AlbumSearch';
 import PlaylistSearch from './views/PlaylistSearch/PlaylistSearch';
+import LikedSongsLoader from './views/LikedSongsLoader/LikedSongsLoader';
 
 import styles from './App.module.css';
 
@@ -27,6 +32,8 @@ function App() {
   // Liked Songs loading and error handling
   const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(false);
   const [likedSongsError, setLikedSongsError] = useState('');
+  const [likedSongsProgress, setLikedSongsProgress] = useState(null);
+  const [isLikedSongsLoaded, setIsLikedSongsLoaded] = useState(false);
 
   // Playlist export and feedback
   const [playlistName, setPlaylistName] = useState('My Swiped Playlist');
@@ -110,40 +117,231 @@ function App() {
       console.error('Failed to load album tracks', err);
     }
   };
+ 
+const handleSelectPlaylist = async (playlistId, onProgress) => {
+  try {
+    const response = await fetch(
+      `${api.defaults.baseURL}/playlists/${encodeURIComponent(playlistId)}/tracks`
+    );
 
+    if (!response.ok) {
+      let message = 'Could not load tracks from this playlist.';
 
-  const handleSelectPlaylist = async (playlistId) => {
-    try {
-      const response = await api.get(
-        `/playlists/${encodeURIComponent(playlistId)}/tracks`
-      );
+      try {
+        const data = await response.json();
+        message = data.error || message;
+      } catch {
+        // Keep the fallback message if the response isn't JSON.
+      }
 
-      setActiveTracks(response.data);
-      setIsSearchExpanded(false);
-
-      // Wait for the search panel to collapse, then scroll to the swiper.
-      setTimeout(() => {
-        filterSectionRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 300);
-    } catch (err) {
-      console.error('Failed to load playlist tracks', err);
+      throw new Error(message);
     }
-  };
+
+    if (!response.body) {
+      throw new Error('Your browser could not read the loading stream.');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let completed = false;
+
+    let finalProgress = {
+      completedPages: 0,
+      totalPages: null,
+    };
+
+    const processEvent = (block) => {
+      let eventName = '';
+      const dataLines = [];
+
+      for (const line of block.split(/\r?\n/)) {
+        if (line.startsWith('event:')) {
+          eventName = line.slice(6).trim();
+        } else if (line.startsWith('data:')) {
+          dataLines.push(line.slice(5).trim());
+        }
+      }
+
+      if (!eventName || dataLines.length === 0) return;
+
+      const data = JSON.parse(dataLines.join('\n'));
+
+      if (eventName === 'progress') {
+        finalProgress = {
+          completedPages: data.completed_pages,
+          totalPages: data.total_pages,
+        };
+
+        onProgress?.(finalProgress);
+      } else if (eventName === 'error') {
+        throw new Error(data.error);
+      } else if (eventName === 'complete') {
+        setActiveTracks(data.tracks);
+
+        onProgress?.({
+          completedPages:
+            finalProgress.totalPages ?? finalProgress.completedPages,
+          totalPages: finalProgress.totalPages,
+          isLoaded: true,
+        });
+
+        completed = true;
+      }
+    };
+
+    while (!completed) {
+      const { value, done } = await reader.read();
+
+      if (done) {
+        buffer += decoder.decode();
+      } else {
+        buffer += decoder.decode(value, { stream: true });
+      }
+
+      const blocks = buffer.split(/\r?\n\r?\n/);
+      buffer = blocks.pop() || '';
+
+      for (const block of blocks) {
+        processEvent(block);
+
+        if (completed) break;
+      }
+
+      if (done) break;
+    }
+
+    if (!completed) {
+      throw new Error('The loading stream ended before the tracks arrived.');
+    }
+
+    // Keep the success message visible before collapsing the search panel.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    setIsSearchExpanded(false);
+
+    // Allow the panel to collapse before scrolling to the filter cards.
+    setTimeout(() => {
+      filterSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 300);
+  } catch (err) {
+    console.error('Failed to load playlist tracks', err);
+    throw err;
+  }
+};
 
   const handleLoadLikedSongs = async () => {
     setIsLoadingLikedSongs(true);
+    setIsLikedSongsLoaded(false);
     setLikedSongsError('');
+    setLikedSongsProgress(null);
 
     try {
-      const response = await api.get('/liked-songs');
+      const response = await fetch(
+        `${api.defaults.baseURL}/liked-songs`
+      );
 
-      setActiveTracks(response.data);
+      if (!response.ok) {
+        let message = 'Could not load your Liked Songs. Please try again.';
+
+        try {
+          const data = await response.json();
+          message = data.error || message;
+        } catch {
+          // Keep the fallback message if the response isn't JSON.
+        }
+
+        throw new Error(message);
+      }
+
+      if (!response.body) {
+        throw new Error('Your browser could not read the loading stream.');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let completed = false;
+
+      let finalProgress = {
+        completedPages: 0,
+        totalPages: null,
+      };
+
+      const processEvent = (block) => {
+        let eventName = '';
+        const dataLines = [];
+
+        for (const line of block.split(/\r?\n/)) {
+          if (line.startsWith('event:')) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+
+        if (!eventName || dataLines.length === 0) return;
+
+        const data = JSON.parse(dataLines.join('\n'));
+
+        if (eventName === 'progress') {
+          finalProgress = {
+            completedPages: data.completed_pages,
+            totalPages: data.total_pages,
+          };
+
+          setLikedSongsProgress(finalProgress);
+        } else if (eventName === 'error') {
+          throw new Error(data.error);
+        } else if (eventName === 'complete') {
+          setActiveTracks(data.tracks);
+
+          // Show a full progress bar during the success pause.
+          setLikedSongsProgress({
+            completedPages:
+              finalProgress.totalPages ?? finalProgress.completedPages,
+            totalPages: finalProgress.totalPages,
+          });
+
+          setIsLikedSongsLoaded(true);
+          completed = true;
+        }
+      };
+
+      while (!completed) {
+        const { value, done } = await reader.read();
+
+        if (done) {
+          buffer += decoder.decode();
+        } else {
+          buffer += decoder.decode(value, { stream: true });
+        }
+
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() || '';
+
+        for (const block of blocks) {
+          processEvent(block);
+
+          if (completed) break;
+        }
+
+        if (done) break;
+      }
+
+      if (!completed) {
+        throw new Error('The loading stream ended before the tracks arrived.');
+      }
+
+      // Keep "Loaded!" visible for half a second.
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Collapse the search panel, then scroll to the filtering cards.
       setIsSearchExpanded(false);
 
-      // Allow the search panel to collapse before scrolling.
       setTimeout(() => {
         filterSectionRef.current?.scrollIntoView({
           behavior: 'smooth',
@@ -153,12 +351,16 @@ function App() {
     } catch (err) {
       console.error('Failed to load Liked Songs', err);
       setLikedSongsError(
-        'Could not load your Liked Songs. Please try again.'
+        err.message || 'Could not load your Liked Songs. Please try again.'
       );
     } finally {
       setIsLoadingLikedSongs(false);
+      setLikedSongsProgress(null);
+      setIsLikedSongsLoaded(false);
     }
   };
+
+
 
   const handleClearFilterQueue = () => {
     if (activeTracks.length === 0) return;
@@ -301,33 +503,17 @@ function App() {
             )}
 
             {trackSource === 'liked' && (
-              <div className={styles.likedSongsSection}>
-                <p>Load your saved Spotify tracks to start filtering.</p>
-
-                <button
-                  type="button"
-                  className={clsx(
-                    styles.connectionButton,
-                    isLoadingLikedSongs && styles.connectionButtonLoading
-                  )}
-                  onClick={handleLoadLikedSongs}
-                  disabled={isLoadingLikedSongs}
-                >
-                  {isLoadingLikedSongs
-                    ? 'Loading Liked Songs...'
-                    : 'Load Liked Songs'}
-                </button>
-
-                {likedSongsError && (
-                  <p role="alert">{likedSongsError}</p>
-                )}
-              </div>
+              <LikedSongsLoader
+                isLoading={isLoadingLikedSongs}
+                isLoaded={isLikedSongsLoaded}
+                onLoad={handleLoadLikedSongs}
+                progress={likedSongsProgress}
+                error={likedSongsError}
+              />
             )}
           </div>
         </div>
       </section>
-
-
 
       <section className={styles.workspace}>
         <div

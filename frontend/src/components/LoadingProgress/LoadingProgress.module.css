@@ -1,0 +1,45 @@
+.progress {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 0;
+    max-width: none;
+    gap: var(--space-3);
+    margin: 0;
+}
+
+.progressMessage,
+.progressCount {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+}
+
+.progressCount {
+    flex-shrink: 0;
+    min-width: 6.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    text-align: right;
+}
+
+.progressTrack {
+    flex: 1;
+    min-width: 2rem;
+    height: 6px;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background: var(--color-border);
+}
+
+.progressFill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-primary);
+    transition: width 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .progressFill {
+        transition: none;
+    }
+}

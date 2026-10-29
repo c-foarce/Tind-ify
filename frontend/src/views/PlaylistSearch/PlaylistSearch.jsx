@@ -1,15 +1,25 @@
 
 import { useEffect, useMemo, useState } from 'react';
+
 import api from '../../services/api';
+
 import SearchBar from '../../components/SearchBar/SearchBar';
 import PlaylistResults from '../../components/PlaylistResults/PlaylistResults';
+
 import styles from './PlaylistSearch.module.css';
 
 function PlaylistSearch({ onSelectPlaylist }) {
+
+  // Playlist search and results
   const [playlists, setPlaylists] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Playlist loading and progress
   const [isLoading, setIsLoading] = useState(true);
   const [loadingPlaylistId, setLoadingPlaylistId] = useState(null);
+  const [playlistProgress, setPlaylistProgress] = useState(null);
+
+  // Error handling
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -45,17 +55,19 @@ function PlaylistSearch({ onSelectPlaylist }) {
 
   const handleSelectPlaylist = async (playlist) => {
     setLoadingPlaylistId(playlist.id);
+    setPlaylistProgress(null);
     setError('');
 
     try {
-      await onSelectPlaylist(playlist.id);
+      await onSelectPlaylist(playlist.id, setPlaylistProgress);
     } catch (err) {
       setError(
-        err.response?.data?.error ||
+        err.message ||
         `Could not load tracks from "${playlist.name}".`
       );
     } finally {
       setLoadingPlaylistId(null);
+      setPlaylistProgress(null);
     }
   };
 
@@ -94,6 +106,7 @@ function PlaylistSearch({ onSelectPlaylist }) {
       <PlaylistResults
         playlists={filteredPlaylists}
         loadingPlaylistId={loadingPlaylistId}
+        playlistProgress={playlistProgress}
         onSelectPlaylist={handleSelectPlaylist}
       />
     </section>
