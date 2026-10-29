@@ -8,6 +8,8 @@ import api from './services/api';
 import CardSwiper from './components/CardSwiper/CardSwiper';
 import ExportPanel from './components/ExportPanel/ExportPanel';
 import TrackSourceSelector from './components/TrackSourceSelector/TrackSourceSelector';
+import HelpDialog from './components/HelpDialog/HelpDialog';
+
 import AlbumSearch from './views/AlbumSearch/AlbumSearch';
 import PlaylistSearch from './views/PlaylistSearch/PlaylistSearch';
 import LikedSongsLoader from './views/LikedSongsLoader/LikedSongsLoader';
@@ -18,6 +20,11 @@ function App() {
 
   // Authentication
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Help dialog
+  const [isHelpOpen, setIsHelpOpen] = useState(() => {
+    return sessionStorage.getItem('tindify-help-dismissed') !== 'true';
+  });
 
   // Search results and search controls
   const [searchResults, setSearchResults] = useState([]);
@@ -49,6 +56,7 @@ function App() {
   // DOM references
   const filterSectionRef = useRef(null);
 
+  const helpButtonRef = useRef(null);
 
 
   useEffect(() => {
@@ -77,6 +85,11 @@ function App() {
 
   const handleLogin = () => {
     window.location.href = 'http://127.0.0.1:5000/api/login';
+  };
+
+  const handleCloseHelp = () => {
+    sessionStorage.setItem('tindify-help-dismissed', 'true');
+    setIsHelpOpen(false);
   };
 
   const handleSearch = async (query) => {
@@ -117,7 +130,7 @@ function App() {
       console.error('Failed to load album tracks', err);
     }
   };
- 
+
 const handleSelectPlaylist = async (playlistId, onProgress) => {
   try {
     const response = await fetch(
@@ -430,25 +443,42 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
 
   return (
     <main className={styles.app}>
+
       <header className={styles.header}>
         <h1 className={styles.title}>🎵 Tind-ify</h1>
 
-        <button
-          type="button"
-          className={clsx(
-            styles.connectionButton,
-            isLoggedIn && styles.connectedButton
-          )}
-          onClick={handleLogin}
-          disabled={isLoggedIn}
-        >
-          {isLoggedIn
-            ? '✓ Connected to Spotify'
-            : 'Connect Spotify Account'}
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            ref={helpButtonRef}
+            type="button"
+            className={styles.helpButton}
+            onClick={() => setIsHelpOpen(true)}
+          >
+            ? Help
+          </button>
+
+          <button
+            type="button"
+            className={clsx(
+              styles.connectionButton,
+              isLoggedIn && styles.connectedButton
+            )}
+            onClick={handleLogin}
+            disabled={isLoggedIn}
+          >
+            {isLoggedIn
+              ? '✓ Connected to Spotify'
+              : 'Connect Spotify Account'}
+          </button>
+        </div>
       </header>
 
-
+      {isHelpOpen && (
+        <HelpDialog
+          onClose={handleCloseHelp}
+          returnFocusRef={helpButtonRef}
+        />
+      )}
 
       <section className={styles.sourceSection}>
         <button

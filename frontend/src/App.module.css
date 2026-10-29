@@ -20,6 +20,31 @@
   letter-spacing: -0.04em;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.helpButton {
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.helpButton:hover {
+  border-color: var(--color-primary);
+}
+
 .connectionButton {
   padding: var(--space-3) var(--space-6);
   border: 1px solid var(--color-border);
