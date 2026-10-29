@@ -1,11 +1,14 @@
 
 
 import os
-from flask import Flask, request, jsonify, redirect
+import spotipy
+import json
+import math
+
+from flask import Flask, Response, stream_with_context, request, jsonify, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 from requests.exceptions import Timeout
-import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
 # Load environment variables from the backend folder
@@ -257,76 +260,129 @@ def get_playlist_tracks(playlist_id):
         if not sp:
             return jsonify({"error": "User not authenticated"}), 401
 
+    except Exception:
+        app.logger.exception("Failed to initialise Spotify client")
+        return jsonify({
+            "error": "Could not retrieve tracks from Spotify."
+        }), 500
+
+    def send_event(event, data):
+        return (
+            f"event: {event}\n"
+            f"data: {json.dumps(data)}\n\n"
+        )
+
+    @stream_with_context
+    def generate():
         tracks = []
         offset = 0
         limit = 50
+        completed_pages = 0
+        total_pages = None
 
-        while True:
-            results = sp.playlist_items(
-                playlist_id,
-                limit=limit,
-                offset=offset,
-                additional_types=('track',)
+        yield send_event("progress", {
+            "completed_pages": 0,
+            "total_pages": None,
+        })
+
+        try:
+            while True:
+                results = sp.playlist_items(
+                    playlist_id,
+                    limit=limit,
+                    offset=offset,
+                    additional_types=('track',)
+                )
+
+                if total_pages is None:
+                    total_items = results.get('total', 0)
+                    total_pages = math.ceil(total_items / limit)
+
+                items = results.get('items', [])
+
+                for entry in items:
+                    # Spotify responses may use "item" or "track".
+                    track = entry.get('item') or entry.get('track')
+
+                    # Ignore unavailable tracks and local files.
+                    if not track or track.get('is_local'):
+                        continue
+
+                    uri = track.get('uri')
+
+                    if not uri:
+                        continue
+
+                    artists = track.get('artists') or []
+                    album = track.get('album') or {}
+                    images = album.get('images') or []
+
+                    tracks.append({
+                        "id": track.get('id'),
+                        "title": track.get('name', 'Unknown track'),
+                        "artist": (
+                            artists[0]['name'] if artists else 'Unknown'
+                        ),
+                        "album_name": album.get(
+                            'name', 'Unknown album'
+                        ),
+                        "artwork": images[0]['url'] if images else None,
+                        "uri": uri,
+                    })
+
+                if total_pages > 0:
+                    completed_pages += 1
+
+                    yield send_event("progress", {
+                        "completed_pages": completed_pages,
+                        "total_pages": total_pages,
+                    })
+
+                if not results.get('next'):
+                    break
+
+                offset += len(items)
+
+            yield send_event("complete", {
+                "tracks": tracks,
+            })
+
+        except spotipy.SpotifyException as e:
+            app.logger.exception(
+                "Failed to retrieve playlist tracks"
             )
 
-            items = results.get('items', [])
-
-            for entry in items:
-                # Spotify responses may use "item" or the older "track" key.
-                track = entry.get('item') or entry.get('track')
-
-                # Ignore unavailable tracks and local files.
-                if not track or track.get('is_local'):
-                    continue
-
-                uri = track.get('uri')
-
-                if not uri:
-                    continue
-
-                artists = track.get('artists') or []
-                album = track.get('album') or {}
-                images = album.get('images') or []
-
-                tracks.append({
-                    "id": track.get('id'),
-                    "title": track.get('name', 'Unknown track'),
-                    "artist": (
-                        artists[0]['name'] if artists else 'Unknown'
-                    ),
-                    "album_name": album.get('name', 'Unknown album'),
-                    "artwork": images[0]['url'] if images else None,
-                    "uri": uri
-                })
-
-            if not results.get('next'):
-                break
-
-            offset += len(items)
-
-        return jsonify(tracks)
-
-    except spotipy.SpotifyException as e:
-        app.logger.exception("Failed to retrieve playlist tracks")
-
-        if e.http_status == 403:
-            return jsonify({
-                "error": (
+            if e.http_status == 403:
+                message = (
                     "Spotify does not allow this playlist to be imported. "
                     "Try a playlist you own or collaborate on."
                 )
-            }), 403
+            elif e.http_status == 404:
+                message = "This playlist could not be found."
+            else:
+                message = "Could not retrieve tracks from Spotify."
 
-        if e.http_status == 404:
-            return jsonify({
-                "error": "This playlist could not be found."
-            }), 404
+            yield send_event("error", {"error": message})
 
-        return jsonify({
-            "error": "Could not retrieve tracks from Spotify."
-        }), e.http_status or 500
+        except Exception:
+            app.logger.exception(
+                "Unexpected error while retrieving playlist tracks"
+            )
 
-# 7. Retreives the user's liked songs
+            yield send_event("error", {
+                "error": "Could not retrieve tracks from Spotify."
+            })
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+# 7. Retreives the user's liked songs and import progress
 @app.route('/api/liked-songs', methods=['GET'])
 def get_liked_songs():
     try:
@@ -335,76 +391,131 @@ def get_liked_songs():
         if not sp:
             return jsonify({"error": "User not authenticated"}), 401
 
+    except Exception:
+        app.logger.exception("Failed to initialise Spotify client")
+        return jsonify({
+            "error": "Could not connect to Spotify."
+        }), 500
+
+    @stream_with_context
+    def generate():
         tracks = []
         offset = 0
         limit = 50
+        completed_pages = 0
+        total_pages = None
 
-        while True:
-            results = sp.current_user_saved_tracks(
-                limit=limit,
-                offset=offset
+        def send_event(event, data):
+            return (
+                f"event: {event}\n"
+                f"data: {json.dumps(data)}\n\n"
             )
 
-            items = results.get('items', [])
+        # Let the frontend show a loading state immediately.
+        yield send_event("progress", {
+            "completed_pages": 0,
+            "total_pages": None,
+            "message": "Connecting to Spotify..."
+        })
 
-            for entry in items:
-                track = entry.get('track')
+        try:
+            while True:
+                results = sp.current_user_saved_tracks(
+                    limit=limit,
+                    offset=offset
+                )
 
-                # Ignore unavailable tracks and local files.
-                if not track or track.get('is_local'):
-                    continue
+                items = results.get('items', [])
 
-                uri = track.get('uri')
+                if total_pages is None:
+                    total_tracks = results.get('total', 0)
+                    total_pages = math.ceil(total_tracks / limit)
 
-                if not uri:
-                    continue
+                for entry in items:
+                    track = entry.get('track')
 
-                artists = track.get('artists') or []
-                album = track.get('album') or {}
-                images = album.get('images') or []
+                    # Ignore unavailable tracks and local files.
+                    if not track or track.get('is_local'):
+                        continue
 
-                tracks.append({
-                    "id": track.get('id'),
-                    "title": track.get('name', 'Unknown track'),
-                    "artist": (
-                        artists[0]['name'] if artists else 'Unknown'
-                    ),
-                    "album_name": album.get('name', 'Unknown album'),
-                    "artwork": images[0]['url'] if images else None,
-                    "uri": uri
+                    uri = track.get('uri')
+
+                    if not uri:
+                        continue
+
+                    artists = track.get('artists') or []
+                    album = track.get('album') or {}
+                    images = album.get('images') or []
+
+                    tracks.append({
+                        "id": track.get('id'),
+                        "title": track.get('name', 'Unknown track'),
+                        "artist": (
+                            artists[0]['name'] if artists else 'Unknown'
+                        ),
+                        "album_name": album.get('name', 'Unknown album'),
+                        "artwork": images[0]['url'] if images else None,
+                        "uri": uri
+                    })
+
+                completed_pages += 1
+
+                yield send_event("progress", {
+                    "completed_pages": completed_pages,
+                    "total_pages": total_pages
                 })
 
-            if not results.get('next'):
-                break
+                if not results.get('next'):
+                    break
 
-            offset += len(items)
+                # Advance by the number of entries Spotify actually returned.
+                offset += len(items)
 
-        return jsonify(tracks)
+            yield send_event("complete", {
+                "tracks": tracks
+            })
 
-    except Timeout:
-        app.logger.exception("Spotify Liked Songs request timed out")
-        return jsonify({
-            "error": (
-                "Spotify took too long to load your Liked Songs. "
-                "Please try again."
-            )
-        }), 504
+        except Timeout:
+            app.logger.exception("Spotify Liked Songs request timed out")
 
-    except spotipy.SpotifyException as e:
-        app.logger.exception("Failed to retrieve Liked Songs")
-
-        if e.http_status == 403:
-            return jsonify({
+            yield send_event("error", {
                 "error": (
+                    "Spotify took too long to load your Liked Songs. "
+                    "Please try again."
+                )
+            })
+
+        except spotipy.SpotifyException as e:
+            app.logger.exception("Failed to retrieve Liked Songs")
+
+            if e.http_status == 403:
+                message = (
                     "Spotify did not allow access to your Liked Songs. "
                     "Reconnect your account and try again."
                 )
-            }), 403
+            else:
+                message = "Could not retrieve your Liked Songs."
 
-        return jsonify({
-            "error": "Could not retrieve your Liked Songs."
-        }), e.http_status or 500
+            yield send_event("error", {"error": message})
 
+        except Exception:
+            app.logger.exception("Unexpected error loading Liked Songs")
+
+            yield send_event("error", {
+                "error": (
+                    "An unexpected error occurred while loading "
+                    "your Liked Songs."
+                )
+            })
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 # 8. Save and create a new playlist
 @app.route('/api/create-playlist', methods=['POST'])
