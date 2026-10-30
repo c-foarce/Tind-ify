@@ -1,3 +1,4 @@
+
 .card {
   display: flex;
   justify-content: center;
@@ -61,33 +62,9 @@
   padding-right: var(--space-8);
 }
 
-.marqueeTrackActive {
-  animation: marquee var(--marquee-duration) linear 1s infinite;
+.marqueeDuplicateHidden {
+  visibility: hidden;
 }
-
-.trackTitle:hover .marqueeTrackActive {
-  animation-play-state: paused;
-}
-
-@keyframes marquee {
-
-  0%,
-  10% {
-    transform: translateX(0);
-  }
-
-  90%,
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .marqueeTrackActive {
-    animation: none;
-  }
-}
-
 
 .artist {
   margin-bottom: var(--space-4);

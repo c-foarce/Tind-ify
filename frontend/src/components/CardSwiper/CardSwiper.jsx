@@ -11,9 +11,11 @@ function CardSwiper({
   isExiting = false,
 }) {
   const titleRef = useRef(null);
+  const textRef = useRef(null);
+  const animationRef = useRef(null);
+  const isHoveredRef = useRef(false);
 
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const [marqueeDuration, setMarqueeDuration] = useState(20);
   const [isConfirmingDuplicate, setIsConfirmingDuplicate] = useState(false);
   const [previousTrack, setPreviousTrack] = useState(null);
 
@@ -28,41 +30,127 @@ function CardSwiper({
 
   const displayedTrack = currentTrack || previousTrack;
 
+  // Measure the title and create the marquee animation.
   useEffect(() => {
     const titleElement = titleRef.current;
+    const textElement = textRef.current;
 
-    if (!titleElement || !displayedTrack) {
+    if (!titleElement || !textElement || !displayedTrack) {
       setIsOverflowing(false);
       return;
     }
 
+    const speed = 40; // Pixels per second.
+    const pauseDuration = 1000; // Milliseconds at each end.
+
+    const reducedMotionQuery = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    );
+
     const checkOverflow = () => {
-      const overflowDistance =
-        titleElement.scrollWidth - titleElement.clientWidth;
+      // Cancel any existing animation before recalculating.
+      animationRef.current?.cancel();
+      animationRef.current = null;
 
-      setIsOverflowing(overflowDistance > 0);
+      const textWidth = textElement.getBoundingClientRect().width;
 
-      // Constant scrolling speed, regardless of title length.
-      const speed = 40; // pixels per second
-      const travelDistance = titleElement.scrollWidth - titleElement.clientWidth;
-      const duration = travelDistance / speed;
+      const paddingRight = parseFloat(
+        window.getComputedStyle(textElement).paddingRight
+      ) || 0;
 
-      setMarqueeDuration(Math.max(duration, 1));
+      const actualTextWidth = textWidth - paddingRight;
 
-      setMarqueeDuration(Math.max(duration, 1));
+      const isTextOverflowing =
+        actualTextWidth > titleElement.clientWidth;
+
+      setIsOverflowing(isTextOverflowing);
+
+      if (!isTextOverflowing || reducedMotionQuery.matches) {
+        return;
+      }
+
+      // The track contains two identical copies.
+      // Moving -50% therefore travels exactly one copy's width.
+      const travelDistance = textWidth;
+
+      const scrollDuration = (travelDistance / speed) * 1000;
+
+      const totalDuration =
+        scrollDuration + pauseDuration * 2;
+
+      // Calculate the exact points at which scrolling starts and ends.
+      const scrollStartOffset =
+        pauseDuration / totalDuration;
+
+      const scrollEndOffset =
+        (pauseDuration + scrollDuration) / totalDuration;
+
+      const animation = titleElement
+        .querySelector(`.${styles.marqueeTrack}`)
+        .animate(
+          [
+            {
+              transform: 'translateX(0)',
+              offset: 0,
+            },
+            {
+              transform: 'translateX(0)',
+              offset: scrollStartOffset,
+            },
+            {
+              transform: 'translateX(-50%)',
+              offset: scrollEndOffset,
+            },
+            {
+              transform: 'translateX(-50%)',
+              offset: 1,
+            },
+          ],
+          {
+            duration: totalDuration,
+            iterations: Infinity,
+            easing: 'linear',
+          }
+        );
+
+      animationRef.current = animation;
+
+      if (isHoveredRef.current) {
+        animation.pause();
+      }
     };
 
     checkOverflow();
 
     const observer = new ResizeObserver(checkOverflow);
-    observer.observe(titleElement);
 
-    return () => observer.disconnect();
-  }, [displayedTrack?.title]);
+    observer.observe(titleElement);
+    observer.observe(textElement);
+
+    reducedMotionQuery.addEventListener('change', checkOverflow);
+
+    return () => {
+      observer.disconnect();
+      reducedMotionQuery.removeEventListener('change', checkOverflow);
+
+      animationRef.current?.cancel();
+      animationRef.current = null;
+    };
+  }, [displayedTrack?.id, displayedTrack?.uri, displayedTrack?.title]);
 
   useEffect(() => {
     setIsConfirmingDuplicate(false);
   }, [currentTrack?.id, currentTrack?.uri]);
+
+  const handleMouseEnter = () => {
+    isHoveredRef.current = true;
+    animationRef.current?.pause();
+  };
+
+  const handleMouseLeave = () => {
+    isHoveredRef.current = false;
+    animationRef.current?.play();
+  };
 
   const isDuplicate = (track) => {
     return playlistQueue.some((queuedTrack) => {
@@ -106,7 +194,6 @@ function CardSwiper({
     onDiscard();
   };
 
-  // Safe fallback if the component is rendered without any track.
   if (!displayedTrack) {
     return null;
   }
@@ -127,28 +214,26 @@ function CardSwiper({
           ref={titleRef}
           className={styles.trackTitle}
           title={displayedTrack.title}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
-          <span
-            className={clsx(
-              styles.marqueeTrack,
-              isOverflowing && styles.marqueeTrackActive
-            )}
-            style={{
-              '--marquee-duration': `${marqueeDuration}s`,
-            }}
-          >
-            <span className={styles.marqueeText}>
+          <span className={styles.marqueeTrack}>
+            <span
+              ref={textRef}
+              className={styles.marqueeText}
+            >
               {displayedTrack.title}
             </span>
 
-            {isOverflowing && (
-              <span
-                className={styles.marqueeText}
-                aria-hidden="true"
-              >
-                {displayedTrack.title}
-              </span>
-            )}
+            <span
+              className={clsx(
+                styles.marqueeText,
+                !isOverflowing && styles.marqueeDuplicateHidden
+              )}
+              aria-hidden="true"
+            >
+              {displayedTrack.title}
+            </span>
           </span>
         </h2>
 
