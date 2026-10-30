@@ -1,3 +1,4 @@
+
 .panel {
   width: 100%;
   min-width: 0;
@@ -13,17 +14,34 @@
   font-size: var(--font-size-xl);
 }
 
+.playlistSettings {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.nameField {
+  flex: 1;
+  min-width: 0;
+}
+
 .label {
   display: block;
-  margin-bottom: var(--space-2);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+.inputLabel {
+  margin-left: var(--space-1);
 }
 
 .nameInput {
   width: 100%;
   min-width: 0;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-2);
   padding: var(--space-3);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -44,6 +62,37 @@
   caret-color: var(--color-text);
   -webkit-box-shadow: 0 0 0 1000px var(--color-bg) inset;
   transition: background-color 9999s ease-out;
+}
+
+.playlistNameInput {
+  box-sizing: border-box;
+  height: 42px;
+  margin-bottom: 0;
+}
+
+.visibilityGroup {
+  flex-shrink: 0;
+}
+
+.visibilityOptions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 42px;
+}
+
+.visibilityOption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.visibilityOption input {
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .queueHeading {
@@ -189,28 +238,6 @@
   cursor: not-allowed;
 }
 
-.successMessage {
-  position: relative;
-  margin-top: 1rem;
-  padding: 0.75rem 1.75rem 0.75rem 0;
-  color: inherit;
-}
-
-.successMessage p {
-  margin: 0 0 0.5rem;
-  line-height: 1.5;
-}
-
-.successMessage a {
-  color: var(--primary-color, #1769aa);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.successMessage a:hover {
-  text-decoration: underline;
-}
-
 .errorMessage {
   margin-top: 1rem;
   padding: 0.75rem;
@@ -240,26 +267,17 @@
   text-decoration: underline;
 }
 
-.dismissButton {
-  position: absolute;
-  top: 0.25rem;
-  right: 0;
-  padding: 0.15rem 0.4rem;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-.dismissButton:hover {
-  opacity: 1;
-}
-
 @media (max-width: 480px) {
   .panel {
     padding: var(--space-4);
+  }
+
+  .playlistSettings {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .visibilityGroup {
+    align-self: flex-start;
   }
 }

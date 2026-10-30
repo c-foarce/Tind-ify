@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+
 import clsx from 'clsx';
 import styles from './ExportPanel.module.css';
 
@@ -10,36 +10,69 @@ function ExportPanel({
   playlistQueue,
   onRemoveTrack,
   onSave,
-  exportSuccess,
   exportError,
+  exportButtonRef,
+  isExporting,
+  isPlaylistPublic,
+  onVisibilityChange,
 }) {
-
-  const [showSuccess, setShowSuccess] = useState(true);
-
-  useEffect(() => {
-    if (exportSuccess) {
-      setShowSuccess(true);
-    }
-  }, [exportSuccess]);
-
   return (
     <aside className={styles.panel}>
       <h2 className={styles.heading}>Your Playlist</h2>
 
-      <label className={styles.label} htmlFor="playlist-name">
-        Playlist name
-      </label>
+      <div className={styles.playlistSettings}>
+        <div className={styles.nameField}>
+          <label className={clsx(styles.label, styles.inputLabel)} htmlFor="playlist-name">
+            Playlist name
+          </label>
 
-      <input
-        id="playlist-name"
-        className={styles.nameInput}
-        type="text"
-        value={playlistName}
-        onChange={(event) => onNameChange(event.target.value)}
-        placeholder="Enter a playlist name"
-      />
+          <input
+            id="playlist-name"
+            className={clsx(
+              styles.nameInput,
+              styles.playlistNameInput
+            )}
+            type="text"
+            value={playlistName}
+            onChange={(event) => onNameChange(event.target.value)}
+            placeholder="Enter a playlist name"
+          />
+        </div>
 
-      <label className={styles.label} htmlFor="playlist-description">
+        <div className={styles.visibilityGroup}>
+          <span className={styles.label}>Visibility</span>
+
+          <div
+            className={styles.visibilityOptions}
+            role="radiogroup"
+            aria-label="Playlist visibility"
+          >
+            <label className={styles.visibilityOption}>
+              <input
+                type="radio"
+                name="playlist-visibility"
+                value="private"
+                checked={!isPlaylistPublic}
+                onChange={() => onVisibilityChange(false)}
+              />
+              Private
+            </label>
+
+            <label className={styles.visibilityOption}>
+              <input
+                type="radio"
+                name="playlist-visibility"
+                value="public"
+                checked={isPlaylistPublic}
+                onChange={() => onVisibilityChange(true)}
+              />
+              Public
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <label className={clsx(styles.label, styles.inputLabel)} htmlFor="playlist-description">
         Playlist description
       </label>
 
@@ -116,41 +149,17 @@ function ExportPanel({
       )}
 
       <button
+        ref={exportButtonRef}
         type="button"
         className={clsx(
           styles.exportButton,
           playlistQueue.length === 0 && styles.exportButtonDisabled
         )}
         onClick={onSave}
-        disabled={playlistQueue.length === 0}
+        disabled={playlistQueue.length === 0 || isExporting}
       >
-        Export to Spotify
+        {isExporting ? 'Exporting...' : 'Export to Spotify'}
       </button>
-
-
-      {exportSuccess && showSuccess && (
-        <div className={styles.successMessage} role="status">
-          <button
-            type="button"
-            className={styles.dismissButton}
-            onClick={() => setShowSuccess(false)}
-            aria-label="Dismiss success message"
-            title="Dismiss message"
-          >
-            x
-          </button>
-
-          <p>{exportSuccess.message}</p>
-
-          <a
-            href={exportSuccess.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open playlist on Spotify
-          </a>
-        </div>
-      )}
 
       {exportError && (
         <div className={styles.errorMessage} role="alert">

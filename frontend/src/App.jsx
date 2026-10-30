@@ -8,7 +8,9 @@ import api from './services/api';
 import CardSwiper from './components/CardSwiper/CardSwiper';
 import ExportPanel from './components/ExportPanel/ExportPanel';
 import TrackSourceSelector from './components/TrackSourceSelector/TrackSourceSelector';
-import HelpDialog from './components/HelpDialog/HelpDialog';
+import HelpDialog from './components/dialogs/HelpDialog/HelpDialog';
+import ClearQueueDialog from './components/dialogs/ClearQueueDialog/ClearQueueDialog';
+import ExportSuccessDialog from './components/dialogs/ExportSuccessDialog/ExportSuccessDialog';
 
 import AlbumSearch from './views/AlbumSearch/AlbumSearch';
 import PlaylistSearch from './views/PlaylistSearch/PlaylistSearch';
@@ -22,9 +24,12 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Help dialog
-  const [isHelpOpen, setIsHelpOpen] = useState(() => {
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(() => {
     return sessionStorage.getItem('tindify-help-dismissed') !== 'true';
   });
+
+  // Clear Dialog
+  const [isClearQueueDialogOpen, setIsClearQueueDialogOpen] = useState(false);
 
   // Search results and search controls
   const [searchResults, setSearchResults] = useState([]);
@@ -45,6 +50,8 @@ function App() {
   // Playlist export and feedback
   const [playlistName, setPlaylistName] = useState('My Swiped Playlist');
   const [playlistDescription, setPlaylistDescription] = useState('');
+  const [isPlaylistPublic, setIsPlaylistPublic] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(null);
   const [exportError, setExportError] = useState(null);
 
@@ -57,6 +64,8 @@ function App() {
   const filterSectionRef = useRef(null);
 
   const helpButtonRef = useRef(null);
+  const clearQueueButtonRef = useRef(null);
+  const exportButtonRef = useRef(null);
 
 
   useEffect(() => {
@@ -89,7 +98,7 @@ function App() {
 
   const handleCloseHelp = () => {
     sessionStorage.setItem('tindify-help-dismissed', 'true');
-    setIsHelpOpen(false);
+    setIsHelpDialogOpen(false);
   };
 
   const handleSearch = async (query) => {
@@ -131,120 +140,120 @@ function App() {
     }
   };
 
-const handleSelectPlaylist = async (playlistId, onProgress) => {
-  try {
-    const response = await fetch(
-      `${api.defaults.baseURL}/playlists/${encodeURIComponent(playlistId)}/tracks`
-    );
+  const handleSelectPlaylist = async (playlistId, onProgress) => {
+    try {
+      const response = await fetch(
+        `${api.defaults.baseURL}/playlists/${encodeURIComponent(playlistId)}/tracks`
+      );
 
-    if (!response.ok) {
-      let message = 'Could not load tracks from this playlist.';
+      if (!response.ok) {
+        let message = 'Could not load tracks from this playlist.';
 
-      try {
-        const data = await response.json();
-        message = data.error || message;
-      } catch {
-        // Keep the fallback message if the response isn't JSON.
-      }
-
-      throw new Error(message);
-    }
-
-    if (!response.body) {
-      throw new Error('Your browser could not read the loading stream.');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let completed = false;
-
-    let finalProgress = {
-      completedPages: 0,
-      totalPages: null,
-    };
-
-    const processEvent = (block) => {
-      let eventName = '';
-      const dataLines = [];
-
-      for (const line of block.split(/\r?\n/)) {
-        if (line.startsWith('event:')) {
-          eventName = line.slice(6).trim();
-        } else if (line.startsWith('data:')) {
-          dataLines.push(line.slice(5).trim());
+        try {
+          const data = await response.json();
+          message = data.error || message;
+        } catch {
+          // Keep the fallback message if the response isn't JSON.
         }
+
+        throw new Error(message);
       }
 
-      if (!eventName || dataLines.length === 0) return;
+      if (!response.body) {
+        throw new Error('Your browser could not read the loading stream.');
+      }
 
-      const data = JSON.parse(dataLines.join('\n'));
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let completed = false;
 
-      if (eventName === 'progress') {
-        finalProgress = {
-          completedPages: data.completed_pages,
-          totalPages: data.total_pages,
-        };
+      let finalProgress = {
+        completedPages: 0,
+        totalPages: null,
+      };
 
-        onProgress?.(finalProgress);
-      } else if (eventName === 'error') {
-        throw new Error(data.error);
-      } else if (eventName === 'complete') {
-        setActiveTracks(data.tracks);
+      const processEvent = (block) => {
+        let eventName = '';
+        const dataLines = [];
 
-        onProgress?.({
-          completedPages:
-            finalProgress.totalPages ?? finalProgress.completedPages,
-          totalPages: finalProgress.totalPages,
-          isLoaded: true,
+        for (const line of block.split(/\r?\n/)) {
+          if (line.startsWith('event:')) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+
+        if (!eventName || dataLines.length === 0) return;
+
+        const data = JSON.parse(dataLines.join('\n'));
+
+        if (eventName === 'progress') {
+          finalProgress = {
+            completedPages: data.completed_pages,
+            totalPages: data.total_pages,
+          };
+
+          onProgress?.(finalProgress);
+        } else if (eventName === 'error') {
+          throw new Error(data.error);
+        } else if (eventName === 'complete') {
+          setActiveTracks(data.tracks);
+
+          onProgress?.({
+            completedPages:
+              finalProgress.totalPages ?? finalProgress.completedPages,
+            totalPages: finalProgress.totalPages,
+            isLoaded: true,
+          });
+
+          completed = true;
+        }
+      };
+
+      while (!completed) {
+        const { value, done } = await reader.read();
+
+        if (done) {
+          buffer += decoder.decode();
+        } else {
+          buffer += decoder.decode(value, { stream: true });
+        }
+
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() || '';
+
+        for (const block of blocks) {
+          processEvent(block);
+
+          if (completed) break;
+        }
+
+        if (done) break;
+      }
+
+      if (!completed) {
+        throw new Error('The loading stream ended before the tracks arrived.');
+      }
+
+      // Keep the success message visible before collapsing the search panel.
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      setIsSearchExpanded(false);
+
+      // Allow the panel to collapse before scrolling to the filter cards.
+      setTimeout(() => {
+        filterSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
         });
-
-        completed = true;
-      }
-    };
-
-    while (!completed) {
-      const { value, done } = await reader.read();
-
-      if (done) {
-        buffer += decoder.decode();
-      } else {
-        buffer += decoder.decode(value, { stream: true });
-      }
-
-      const blocks = buffer.split(/\r?\n\r?\n/);
-      buffer = blocks.pop() || '';
-
-      for (const block of blocks) {
-        processEvent(block);
-
-        if (completed) break;
-      }
-
-      if (done) break;
+      }, 300);
+    } catch (err) {
+      console.error('Failed to load playlist tracks', err);
+      throw err;
     }
-
-    if (!completed) {
-      throw new Error('The loading stream ended before the tracks arrived.');
-    }
-
-    // Keep the success message visible before collapsing the search panel.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setIsSearchExpanded(false);
-
-    // Allow the panel to collapse before scrolling to the filter cards.
-    setTimeout(() => {
-      filterSectionRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 300);
-  } catch (err) {
-    console.error('Failed to load playlist tracks', err);
-    throw err;
-  }
-};
+  };
 
   const handleLoadLikedSongs = async () => {
     setIsLoadingLikedSongs(true);
@@ -378,13 +387,12 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
   const handleClearFilterQueue = () => {
     if (activeTracks.length === 0) return;
 
-    const confirmed = window.confirm(
-      `Remove all ${activeTracks.length} remaining tracks from the filter queue? Tracks already kept for export will not be affected.`
-    );
+    setIsClearQueueDialogOpen(true);
+  };
 
-    if (!confirmed) return;
-
+  const handleConfirmClearFilterQueue = () => {
     setActiveTracks([]);
+    setIsClearQueueDialogOpen(false);
   };
 
   const handleDiscardTrack = () => {
@@ -404,11 +412,9 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
 
 
   const handleSavePlaylist = async () => {
-    if (playlistQueue.length === 0) {
-      alert('Add some tracks first!');
-      return;
-    }
+    if (playlistQueue.length === 0 || isExporting) return;
 
+    setIsExporting(true);
     setExportSuccess(null);
     setExportError(null);
 
@@ -436,7 +442,12 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
           err.response?.data?.error ||
           'Failed to export the playlist. Please try again.',
         url: err.response?.data?.playlist_url || null,
+        partial: Boolean(err.response?.data?.playlist_url),
+        added: err.response?.data?.added ?? null,
+        total: err.response?.data?.total ?? null,
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -452,7 +463,7 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
             ref={helpButtonRef}
             type="button"
             className={styles.helpButton}
-            onClick={() => setIsHelpOpen(true)}
+            onClick={() => setIsHelpDialogOpen(true)}
           >
             ? Help
           </button>
@@ -473,10 +484,26 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
         </div>
       </header>
 
-      {isHelpOpen && (
+      {isHelpDialogOpen && (
         <HelpDialog
           onClose={handleCloseHelp}
           returnFocusRef={helpButtonRef}
+        />
+      )}
+
+      {isClearQueueDialogOpen && (
+        <ClearQueueDialog
+          onClose={() => setIsClearQueueDialogOpen(false)}
+          onConfirm={handleConfirmClearFilterQueue}
+          returnFocusRef={clearQueueButtonRef}
+        />
+      )}
+
+      {exportSuccess && (
+        <ExportSuccessDialog
+          exportSuccess={exportSuccess}
+          onClose={() => setExportSuccess(null)}
+          returnFocusRef={exportButtonRef}
         />
       )}
 
@@ -560,6 +587,7 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
               </h2>
 
               <button
+                ref={clearQueueButtonRef}
                 type="button"
                 className={styles.clearQueueButton}
                 onClick={handleClearFilterQueue}
@@ -595,8 +623,11 @@ const handleSelectPlaylist = async (playlistId, onProgress) => {
           playlistQueue={playlistQueue}
           onRemoveTrack={handleRemoveTrack}
           onSave={handleSavePlaylist}
-          exportSuccess={exportSuccess}
           exportError={exportError}
+          exportButtonRef={exportButtonRef}
+          isExporting={isExporting}
+          isPlaylistPublic={isPlaylistPublic}
+          onVisibilityChange={setIsPlaylistPublic}
         />
       </section>
     </main>
