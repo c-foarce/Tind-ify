@@ -1,5 +1,3 @@
-
-
 import os
 import spotipy
 import json
@@ -198,7 +196,6 @@ def get_album_tracks():
 
 
 # 5. Retrieve the current user's playlists
-
 @app.route('/api/playlists', methods=['GET'])
 def get_playlists():
     try:
