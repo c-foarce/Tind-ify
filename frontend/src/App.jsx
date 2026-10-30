@@ -50,7 +50,6 @@ function App() {
   // Playlist export and feedback
   const [playlistName, setPlaylistName] = useState('My Swiped Playlist');
   const [playlistDescription, setPlaylistDescription] = useState('');
-  const [isPlaylistPublic, setIsPlaylistPublic] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(null);
   const [exportError, setExportError] = useState(null);
@@ -383,7 +382,6 @@ function App() {
   };
 
 
-
   const handleClearFilterQueue = () => {
     if (activeTracks.length === 0) return;
 
@@ -626,8 +624,6 @@ function App() {
           exportError={exportError}
           exportButtonRef={exportButtonRef}
           isExporting={isExporting}
-          isPlaylistPublic={isPlaylistPublic}
-          onVisibilityChange={setIsPlaylistPublic}
         />
       </section>
     </main>

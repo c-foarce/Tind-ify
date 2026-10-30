@@ -248,6 +248,7 @@ def get_playlists():
             "error": "Could not retrieve playlists from Spotify."
         }), e.http_status or 500
 
+
 # 6. Retrieve tracks from a selected playlist
 @app.route('/api/playlists/<playlist_id>/tracks', methods=['GET'])
 def get_playlist_tracks(playlist_id):
@@ -379,7 +380,7 @@ def get_playlist_tracks(playlist_id):
         },
     )
 
-# 7. Retreives the user's liked songs and import progress
+# 7. Retrieves the user's liked songs and import progress
 @app.route('/api/liked-songs', methods=['GET'])
 def get_liked_songs():
     try:
@@ -532,7 +533,7 @@ def create_playlist():
                 "error": "Invalid request data."
             }), 400
 
-        # Validate the playlist name before using string methods.
+        # Validate the playlist name.
         playlist_name = data.get('name', 'My Filtered Mix')
 
         if not isinstance(playlist_name, str):
@@ -547,8 +548,8 @@ def create_playlist():
                 "error": "Please provide a playlist name."
             }), 400
 
+        # Validate the playlist description.
         playlist_description = data.get('description') or ''
-        track_uris = data.get('uris', [])
 
         if not isinstance(playlist_description, str):
             return jsonify({
@@ -556,6 +557,8 @@ def create_playlist():
             }), 400
 
         # Validate the submitted track URIs.
+        track_uris = data.get('uris', [])
+
         if not isinstance(track_uris, list) or not track_uris:
             return jsonify({
                 "error": "No tracks selected."
@@ -569,7 +572,7 @@ def create_playlist():
                 "error": "One or more track URIs are invalid."
             }), 400
 
-        # Create the playlist first.
+        # Create a new public playlist.
         new_playlist = sp._post(
             "me/playlists",
             payload={

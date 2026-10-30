@@ -16,20 +16,21 @@
 
 .playlistSettings {
   display: flex;
-  align-items: flex-end;
-  gap: var(--space-4);
-  margin-bottom: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 }
 
-.nameField {
-  flex: 1;
+.nameField,
+.descriptionField {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
 .label {
   display: block;
-  margin-top: var(--space-3);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
@@ -41,6 +42,7 @@
 .nameInput {
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   margin-bottom: var(--space-2);
   padding: var(--space-3);
   background: var(--color-bg);
@@ -65,34 +67,12 @@
 }
 
 .playlistNameInput {
-  box-sizing: border-box;
   height: 42px;
   margin-bottom: 0;
 }
 
-.visibilityGroup {
-  flex-shrink: 0;
-}
-
-.visibilityOptions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  height: 42px;
-}
-
-.visibilityOption {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.visibilityOption input {
-  accent-color: var(--color-primary);
-  cursor: pointer;
+.descriptionField .nameInput {
+  margin-bottom: 0;
 }
 
 .queueHeading {
@@ -265,19 +245,4 @@
 
 .errorMessage a:hover {
   text-decoration: underline;
-}
-
-@media (max-width: 480px) {
-  .panel {
-    padding: var(--space-4);
-  }
-
-  .playlistSettings {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .visibilityGroup {
-    align-self: flex-start;
-  }
 }

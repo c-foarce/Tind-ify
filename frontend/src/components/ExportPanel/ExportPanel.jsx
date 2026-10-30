@@ -13,8 +13,6 @@ function ExportPanel({
   exportError,
   exportButtonRef,
   isExporting,
-  isPlaylistPublic,
-  onVisibilityChange,
 }) {
   return (
     <aside className={styles.panel}>
@@ -39,51 +37,21 @@ function ExportPanel({
           />
         </div>
 
-        <div className={styles.visibilityGroup}>
-          <span className={styles.label}>Visibility</span>
+        <div className={styles.descriptionField}>
+          <label className={clsx(styles.label, styles.inputLabel)} htmlFor="playlist-description">
+            Playlist description
+          </label>
 
-          <div
-            className={styles.visibilityOptions}
-            role="radiogroup"
-            aria-label="Playlist visibility"
-          >
-            <label className={styles.visibilityOption}>
-              <input
-                type="radio"
-                name="playlist-visibility"
-                value="private"
-                checked={!isPlaylistPublic}
-                onChange={() => onVisibilityChange(false)}
-              />
-              Private
-            </label>
-
-            <label className={styles.visibilityOption}>
-              <input
-                type="radio"
-                name="playlist-visibility"
-                value="public"
-                checked={isPlaylistPublic}
-                onChange={() => onVisibilityChange(true)}
-              />
-              Public
-            </label>
-          </div>
+          <textarea
+            id="playlist-description"
+            className={styles.nameInput}
+            value={description}
+            onChange={(event) => onDescriptionChange(event.target.value)}
+            placeholder="What is this playlist about?"
+            rows={3}
+          />
         </div>
       </div>
-
-      <label className={clsx(styles.label, styles.inputLabel)} htmlFor="playlist-description">
-        Playlist description
-      </label>
-
-      <textarea
-        id="playlist-description"
-        className={styles.nameInput}
-        value={description}
-        onChange={(event) => onDescriptionChange(event.target.value)}
-        placeholder="What is this playlist about?"
-        rows={3}
-      />
 
       <div className={styles.queueHeading}>
         <h3>Selected Tracks</h3>
