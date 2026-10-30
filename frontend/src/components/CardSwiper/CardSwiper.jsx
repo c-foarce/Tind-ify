@@ -42,9 +42,12 @@ function CardSwiper({
 
       setIsOverflowing(overflowDistance > 0);
 
-      // Approximately 40 pixels of travel per second.
-      const speed = 40;
-      const duration = (overflowDistance / 2) / speed;
+      // Constant scrolling speed, regardless of title length.
+      const speed = 40; // pixels per second
+      const travelDistance = titleElement.scrollWidth - titleElement.clientWidth;
+      const duration = travelDistance / speed;
+
+      setMarqueeDuration(Math.max(duration, 1));
 
       setMarqueeDuration(Math.max(duration, 1));
     };
